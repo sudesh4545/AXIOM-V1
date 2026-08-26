@@ -1,0 +1,57 @@
+# ---------- Secrets ----------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ---------- Node / frontend ----------
+node_modules/
+.next/
+.vinext/
+.wrangler/
+dist/
+build/
+*.tsbuildinfo
+next-env.d.ts
+.eslintcache
+
+# ---------- Python / backend ----------
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# ---------- Local databases ----------
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# ---------- Editors / OS ----------
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---------- Logs ----------
+*.log
+npm-debug.log*
+logs/
+
+# ---------- Day 1 ka purana nested git repo ----------
+# `apps/web/` mein pehle apna alag `.git` tha (Day 1 scaffold ki 3 commits).
+# Usse wahan chhod dete to git `apps/web` ko **gitlink** (embedded repo) maan
+# leta aur poora frontend untracked reh jaata — clone karne pe apps/web khaali
+# milta, bina koi error diye. Isliye woh dir rename kar diya hai; history
+# safe hai, delete nahi hui.
+#
+# Wapas chahiye ho to:  mv apps/web/.git.day1-backup apps/web/.git
+apps/web/.git.day1-backup/
