@@ -12,6 +12,7 @@ import type {
   DashboardResponse,
   WorkspaceSummary,
 } from './axiom-contract';
+import { createBundledDemoOverview } from './demo-overview';
 
 /**
  * Base URL environment se aati hai, hardcode nahi.
@@ -20,9 +21,13 @@ import type {
  * browser bundle mein bhejta hai. Yeh safety feature hai: server-side secrets
  * (database password, API keys) galti se client pe leak nahi hote.
  */
-const API_BASE_URL = (
-  process.env.NEXT_PUBLIC_AXIOM_API_URL ?? 'http://localhost:8000'
-).replace(/\/$/, '');
+const CONFIGURED_API_BASE_URL = process.env.NEXT_PUBLIC_AXIOM_API_URL?.trim();
+const API_BASE_URL = (CONFIGURED_API_BASE_URL || 'http://localhost:8000').replace(/\/$/, '');
+
+function shouldUseHostedDemoFallback(): boolean {
+  if (CONFIGURED_API_BASE_URL || typeof window === 'undefined') return false;
+  return !['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+}
 
 /** Backend ka `ErrorDetail` envelope carry karne wala error. */
 export class AxiomApiError extends Error {
@@ -110,6 +115,12 @@ export function getDashboard(
  * apne aap kaam karta rehta hai.
  */
 export async function loadOverview(operatorEmail?: string): Promise<DashboardResponse> {
+  // A published UI has no access to the developer's localhost FastAPI process.
+  // Until the API receives its own production URL, keep the hosted dashboard
+  // functional with an explicitly labelled demo payload. Local development
+  // still exercises the real API contract end to end.
+  if (shouldUseHostedDemoFallback()) return createBundledDemoOverview();
+
   const workspaces = await listWorkspaces();
   if (workspaces.length === 0) {
     throw new Error(

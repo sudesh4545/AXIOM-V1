@@ -108,19 +108,59 @@ function FiberWave({ className = '' }: { className?: string }) {
 
 function Sparkline({ tone, points }: { tone: Tone; points: number[] }) {
   // 105 / count => 10 points pe 10.5% spacing, exactly Day 1 design jaisa.
-  // Formula count se derive hai, isliye point count badle to spacing khud
-  // adjust ho jaati hai.
   const step = 105 / points.length;
+
+  /*
+    Spark values ko **normalise** karna zaroori hai.
+
+    API raw numbers bhejta hai — churn: [50,43,46,36,40,30,34,22,26,14],
+    MRR: [14,20,17,29,24,39,31,46,41,53]. Pehle yeh seedhe `bottom: 50%` ki
+    tarah laga diye jaate the, matlab line box ki sirf 14%–53% height use karti
+    thi. Browser mein measure kiya to 68px ke box mein saare dots bas 29px se
+    59px ke beech the — poora upar ka aadha hissa khaali.
+
+    Churn mein yeh sabse bura lagta tha: uska total movement 24px mein simat
+    jaata, to woh ek dabi hui squiggle jaisi dikhti thi, trend saaf nahi tha.
+
+    Fix: har series ko uske apne min–max se 0–100 pe stretch karo, phir 12%–88%
+    ke band mein rakho (taaki dots box ke kinaron se na chipke). Line ka **shape
+    bilkul same** rehta hai — bas poori available jagah use hoti hai, isliye
+    trend clearly padha ja sakta hai.
+  */
+  const min = Math.min(...points);
+  const max = Math.max(...points);
+  const span = max - min || 1; // saari values same hon to divide-by-zero se bachao
+  const scaled = points.map((value) => 12 + ((value - min) / span) * 76);
+
+  /*
+    Line ko **SVG polyline** se banate hain, CSS-rotated divs se nahi.
+
+    Day 1 mein har dot ke `::after` pe ek rotated bar tha:
+        --line-length: sqrt(x² + y²)px   (x = 11 hardcoded)
+        --line-angle:  atan2(-y, x)deg
+    Yahan `x` pixels mein tha aur `y` **percent** mein — do alag units ko ek
+    hi triangle mein mila diya. Isliye length aur angle dono galat aate the:
+    browser mein measure kiya to segment 12.4px @ 27.5deg tha jabki asli
+    distance 11.7px @ 20deg thi. Segment next dot se aage nikal jaata, phir
+    agla segment neeche se shuru hota — screen par aara (sawtooth) dikhta tha.
+
+    SVG mein yeh problem hi nahi hoti: `viewBox="0 0 100 100"` +
+    `preserveAspectRatio="none"` se coordinates seedhe box ke % ban jaate hain,
+    aur browser khud exact line kheenchta hai — kisi trigonometry ki zaroorat
+    nahi. `vector-effect="non-scaling-stroke"` isliye ki stretch hone par
+    stroke ki thickness na badle.
+  */
+  const path = scaled.map((height, index) => `${index * step},${100 - height}`).join(' ');
+
   return (
     <div className={`sparkline ${tone}`} aria-hidden="true">
       <span className="spark-glow" />
-      {points.map((height, index) => {
-        const next = points[index + 1];
-        const delta = next === undefined ? 0 : next - height;
-        const x = 11;
-        const y = delta * 0.82;
-        return <i key={index} style={{ left: `${index * step}%`, bottom: `${height}%`, '--line-angle': `${Math.atan2(-y, x) * (180 / Math.PI)}deg`, '--line-length': `${Math.sqrt(x ** 2 + y ** 2)}px`, '--delay': `${index * 70}ms` } as CSSProperties} />;
-      })}
+      <svg className="spark-path" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <polyline points={path} vectorEffect="non-scaling-stroke" />
+      </svg>
+      {scaled.map((height, index) => (
+        <i key={index} style={{ left: `${index * step}%`, bottom: `${height}%`, '--delay': `${index * 70}ms` } as CSSProperties} />
+      ))}
       {Array.from({ length: 14 }, (_, index) => <b key={index} style={{ '--i': index } as CSSProperties} />)}
     </div>
   );
@@ -164,13 +204,16 @@ function GrowthChart({ growth }: { growth: GrowthSeries }) {
       <div className="chart-bars" aria-hidden="true">{heights.map((height, index) => <i key={index} style={{ height: `${height}%`, '--bar-delay': `${index * 45}ms` } as CSSProperties} />)}</div>
       <div className="chart-particles" aria-hidden="true">{Array.from({ length: 52 }, (_, index) => <i key={index} style={{ '--i': index } as CSSProperties} />)}</div>
       <div className="chart-line" aria-hidden="true">
-        {heights.map((height, index) => {
-          const next = heights[index + 1];
-          const delta = next === undefined ? 0 : next - height;
-          const x = step;
-          const y = delta;
-          return <i key={index} style={{ bottom: `${height}%`, left: `${index * step + 1}%`, '--segment-angle': `${Math.atan2(-y, x) * (180 / Math.PI)}deg`, '--segment-length': `${Math.sqrt(x ** 2 + (y * .78) ** 2) * .55}vh`, '--point-delay': `${index * 55}ms` } as CSSProperties} />;
-        })}
+        {/* Wahi SVG approach jo Sparkline mein hai — yahan bug zyada dikh raha tha
+            kyunki chart bada hai. `--segment-length` `vh` mein tha aur `* .55`
+            jaisa magic number lagaya tha; woh sirf ek hi screen size pe theek
+            baithta tha. SVG mein koi magic number nahi. */}
+        <svg className="chart-path" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <polyline points={heights.map((height, index) => `${index * step + 1},${100 - height}`).join(' ')} vectorEffect="non-scaling-stroke" />
+        </svg>
+        {heights.map((height, index) => (
+          <i key={index} style={{ bottom: `${height}%`, left: `${index * step + 1}%`, '--point-delay': `${index * 55}ms` } as CSSProperties} />
+        ))}
       </div>
       <span className="chart-value">{growth.currentDisplay}</span>
       <div className="chart-dates">{growth.xAxisLabels.map((label, index) => <span key={`${label}-${index}`}>{label}</span>)}</div>
@@ -354,7 +397,7 @@ export default function Home() {
           ))}
         </nav>
         <FiberWave className="sidebar-wave" />
-        <div className="copilot-card"><strong><Sparkles /> AXIOM Copilot</strong><p>Ask a question or run an analysis...</p><button onClick={() => setCopilotOpen(true)} type="button" aria-label="Open AXIOM Copilot"><ArrowRight /></button></div>
+        <div className="copilot-card"><strong><Sparkles /> AXIOM AI</strong><p>Ask a question or run an analysis...</p><button onClick={() => setCopilotOpen(true)} type="button" aria-label="Open AXIOM AI"><ArrowRight /></button></div>
         <button className="collapse" type="button"><span className="collapse-icon"><ArrowLeft /></span><span>Collapse</span></button>
       </aside>
 
@@ -450,7 +493,7 @@ export default function Home() {
         />
       )}
 
-      {copilotOpen && <aside className="copilot-drawer" aria-label="AXIOM Copilot"><header><span><Sparkles /> AXIOM Copilot</span><button type="button" aria-label="Close Copilot" onClick={() => setCopilotOpen(false)}><X /></button></header><div className="copilot-message"><BrainCircuit /><p>{bottleneck.summary}</p></div><button className="prompt-chip" type="button" onClick={() => notify(recommendation.evidence[0] ?? 'Analysis started')}>Explain the bottleneck</button><button className="prompt-chip" type="button" onClick={() => setReviewOpen(true)}>Review recommended experiment</button><label><input placeholder="Ask AXIOM anything..." /><button type="button" aria-label="Send question"><Send /></button></label></aside>}
+      {copilotOpen && <aside className="copilot-drawer" aria-label="AXIOM AI"><header><span><Sparkles /> AXIOM AI</span><button type="button" aria-label="Close AXIOM AI" onClick={() => setCopilotOpen(false)}><X /></button></header><div className="copilot-message"><BrainCircuit /><p>{bottleneck.summary}</p></div><button className="prompt-chip" type="button" onClick={() => notify(recommendation.evidence[0] ?? 'Analysis started')}>Explain the bottleneck</button><button className="prompt-chip" type="button" onClick={() => setReviewOpen(true)}>Review recommended experiment</button><label><input placeholder="Ask AXIOM anything..." /><button type="button" aria-label="Send question"><Send /></button></label></aside>}
 
       {toast && <div className="toast" role="status"><CircleCheckBig /> {toast}</div>}
     </main>
