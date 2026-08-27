@@ -194,6 +194,19 @@ export interface DashboardResponse {
   recommendation: Recommendation;
   experiments: ActiveExperiment[];
   decisions: DecisionReceiptSummary[];
+  /** Signed-in Sites identity. Supplied only by the hosted same-origin API. */
+  session?: {
+    userId: string;
+    email: string;
+    displayName: string;
+    authenticated: boolean;
+  };
+  /** Persistent snapshot state, useful for honest UI status and write feedback. */
+  storage?: {
+    state: 'connected';
+    revision: number;
+    lastSavedAt: string;
+  };
 }
 
 export interface ApiErrorDetail {

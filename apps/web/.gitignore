@@ -40,3 +40,5 @@ next-env.d.ts
 /.wrangler/
 /outputs/
 /work/
+/tsconfig.tsbuildinfo
+/.git.day1-backup/

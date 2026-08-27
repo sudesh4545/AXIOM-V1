@@ -12,7 +12,6 @@ import type {
   DashboardResponse,
   WorkspaceSummary,
 } from './axiom-contract';
-import { createBundledDemoOverview } from './demo-overview';
 
 /**
  * Base URL environment se aati hai, hardcode nahi.
@@ -22,12 +21,7 @@ import { createBundledDemoOverview } from './demo-overview';
  * (database password, API keys) galti se client pe leak nahi hote.
  */
 const CONFIGURED_API_BASE_URL = process.env.NEXT_PUBLIC_AXIOM_API_URL?.trim();
-const API_BASE_URL = (CONFIGURED_API_BASE_URL || 'http://localhost:8000').replace(/\/$/, '');
-
-function shouldUseHostedDemoFallback(): boolean {
-  if (CONFIGURED_API_BASE_URL || typeof window === 'undefined') return false;
-  return !['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
-}
+const API_BASE_URL = (CONFIGURED_API_BASE_URL || '').replace(/\/$/, '');
 
 /** Backend ka `ErrorDetail` envelope carry karne wala error. */
 export class AxiomApiError extends Error {
@@ -47,10 +41,7 @@ export class AxiomApiError extends Error {
 /** API reachable hi nahi hai (server band hai / network down). */
 export class AxiomNetworkError extends Error {
   constructor(url: string, cause: unknown) {
-    super(
-      `AXIOM API reachable nahi hai (${url}). ` +
-        'Backend chalu karein:  cd apps/api && uvicorn app.main:app --reload --port 8000',
-    );
+    super(`AXIOM API reachable nahi hai (${url || 'same-origin'}).`);
     this.name = 'AxiomNetworkError';
     this.cause = cause;
   }
@@ -115,11 +106,9 @@ export function getDashboard(
  * apne aap kaam karta rehta hai.
  */
 export async function loadOverview(operatorEmail?: string): Promise<DashboardResponse> {
-  // A published UI has no access to the developer's localhost FastAPI process.
-  // Until the API receives its own production URL, keep the hosted dashboard
-  // functional with an explicitly labelled demo payload. Local development
-  // still exercises the real API contract end to end.
-  if (shouldUseHostedDemoFallback()) return createBundledDemoOverview();
+  // Day 3: hosted app apni same-origin Worker API + D1 use karti hai. Optional
+  // external URL sirf legacy FastAPI development ke liye supported hai.
+  if (!CONFIGURED_API_BASE_URL) return request<DashboardResponse>('/api/v1/dashboard');
 
   const workspaces = await listWorkspaces();
   if (workspaces.length === 0) {
@@ -128,6 +117,13 @@ export async function loadOverview(operatorEmail?: string): Promise<DashboardRes
     );
   }
   return getDashboard(workspaces[0].id, operatorEmail);
+}
+
+export function approveRecommendation(recommendationId: string): Promise<DashboardResponse> {
+  return request<DashboardResponse>('/api/v1/dashboard', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'approve_recommendation', recommendationId }),
+  });
 }
 
 export { API_BASE_URL };

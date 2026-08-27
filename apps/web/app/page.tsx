@@ -6,11 +6,12 @@ import {
   Activity, ArrowLeft, ArrowRight, BarChart3, Beaker, Bell, BrainCircuit,
   Building2, ChevronDown, CircleAlert, CircleCheckBig, CircleX, FlaskConical,
   Funnel, Home as HomeIcon, IndianRupee, Info, Network, Puzzle, ReceiptText,
-  Search, Send, Settings, ShieldCheck, Sparkles, Timer, Users, X, Zap,
+  LogOut, Search, Send, Settings, ShieldCheck, Sparkles, Timer, Users, X, Zap,
   type LucideIcon,
 } from 'lucide-react';
 
-import { AxiomApiError, AxiomNetworkError, loadOverview } from './lib/axiom-api';
+import { approveRecommendation, AxiomApiError, AxiomNetworkError, loadOverview } from './lib/axiom-api';
+import { SectionPages } from './section-pages';
 import type {
   ActiveExperiment,
   Bottleneck,
@@ -42,6 +43,25 @@ const navItems: Array<{ icon: LucideIcon; label: string }> = [
   { icon: Puzzle, label: 'Integrations' },
   { icon: Settings, label: 'Settings' },
 ];
+
+const NAV_TARGET_IDS: Record<string, string> = {
+  Overview: 'dashboard-overview',
+  Intelligence: 'section-intelligence',
+  Experiments: 'section-experiments',
+  Analytics: 'section-analytics',
+  Simulations: 'section-simulations',
+  Decisions: 'section-decisions',
+  Integrations: 'section-integrations',
+  Settings: 'section-settings',
+};
+
+const NAV_SLUGS: Record<string, string> = {
+  Overview: 'overview', Intelligence: 'intelligence', Experiments: 'experiments',
+  Analytics: 'analytics', Simulations: 'simulations', Decisions: 'decisions',
+  Integrations: 'integrations', Settings: 'settings',
+};
+
+const NAV_BY_SLUG = Object.fromEntries(Object.entries(NAV_SLUGS).map(([label, slug]) => [slug, label]));
 
 /** Metric `key` -> icon. Naya metric aaya to fallback icon milta hai, crash nahi. */
 const METRIC_ICONS: Record<string, LucideIcon> = {
@@ -266,14 +286,59 @@ function DecisionRow({ decision, onSelect }: { decision: DecisionReceiptSummary;
   );
 }
 
+function ExperimentDetailModal({ experiment, onClose, onAnalyze }: { experiment: ActiveExperiment; onClose: () => void; onAnalyze: () => void }) {
+  return (
+    <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
+      <section className="review-modal" role="dialog" aria-modal="true" aria-labelledby="experiment-detail-title" onMouseDown={(event) => event.stopPropagation()}>
+        <button className="modal-close" type="button" onClick={onClose} aria-label="Close experiment details"><X /></button>
+        <span className="modal-kicker"><Beaker /> ACTIVE EXPERIMENT</span>
+        <h2 id="experiment-detail-title">{experiment.name}</h2>
+        <p>Testing {experiment.focusMetric} on {experiment.trafficPct}% of eligible traffic. The result is {experiment.isConclusive ? 'ready for a decision' : 'still collecting evidence'}.</p>
+        <div className="modal-metrics">
+          <span><small>Progress</small><strong>{experiment.progressPct}%</strong></span>
+          <span><small>Observed lift</small><strong>{signedPct(experiment.observedLiftPct)}</strong></span>
+          <span><small>Status</small><strong>{humanise(experiment.status)}</strong></span>
+        </div>
+        <div className={`guardrail${experiment.guardrailBreached ? ' warning' : ''}`}>
+          {experiment.guardrailBreached ? <CircleAlert /> : <ShieldCheck />}
+          <span><b>{experiment.guardrailBreached ? 'Guardrail attention required' : 'Guardrails healthy'}</b><small>{experiment.isConclusive ? 'Evidence threshold reached' : 'Sequential test is still running'}</small></span>
+        </div>
+        <div className="modal-actions"><button type="button" onClick={onClose}>Close</button><button type="button" onClick={onAnalyze}><BrainCircuit /> Analyze with AXIOM</button></div>
+      </section>
+    </div>
+  );
+}
+
+function DecisionDetailModal({ decision, onClose, onAnalyze }: { decision: DecisionReceiptSummary; onClose: () => void; onAnalyze: () => void }) {
+  return (
+    <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
+      <section className="review-modal" role="dialog" aria-modal="true" aria-labelledby="decision-detail-title" onMouseDown={(event) => event.stopPropagation()}>
+        <button className="modal-close" type="button" onClick={onClose} aria-label="Close decision receipt"><X /></button>
+        <span className="modal-kicker"><ReceiptText /> DECISION RECEIPT</span>
+        <h2 id="decision-detail-title">{decision.title}</h2>
+        <p>{decision.summary}</p>
+        <div className="modal-metrics">
+          <span><small>Outcome</small><strong>{humanise(decision.outcome)}</strong></span>
+          <span><small>Measured impact</small><strong>{signedPct(decision.impactPct)}</strong></span>
+          <span><small>Decided</small><strong className="detail-date">{decision.decidedAtDisplay}</strong></span>
+        </div>
+        <div className="guardrail"><ShieldCheck /><span><b>Evidence receipt preserved</b><small>Decision remains traceable to its measured outcome</small></span></div>
+        <div className="modal-actions"><button type="button" onClick={onClose}>Close</button><button type="button" onClick={onAnalyze}><BrainCircuit /> Ask AXIOM</button></div>
+      </section>
+    </div>
+  );
+}
+
 function ReviewModal({
   recommendation,
   onClose,
   onApprove,
+  saving,
 }: {
   recommendation: Recommendation;
   onClose: () => void;
-  onApprove: () => void;
+  onApprove: () => void | Promise<void>;
+  saving: boolean;
 }) {
   const gate = recommendation.realityGate;
   return (
@@ -306,7 +371,7 @@ function ReviewModal({
           <button type="button" onClick={onClose}>Not now</button>
           {/* V1 mein `requiresHumanApproval` always true hai — yeh button hi woh
               human approval hai. Autonomous launch scope se bahar hai. */}
-          <button type="button" onClick={onApprove}><Zap /> Approve canary</button>
+          <button type="button" onClick={onApprove} disabled={saving}><Zap /> {saving ? 'Saving approval…' : 'Approve canary'}</button>
         </div>
       </section>
     </div>
@@ -330,8 +395,17 @@ function StatusShell({ title, message, hint }: { title: string; message: string;
 
 export default function Home() {
   const [activeNav, setActiveNav] = useState('Overview');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [approvalSaving, setApprovalSaving] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
+  const [copilotQuery, setCopilotQuery] = useState('');
+  const [copilotReply, setCopilotReply] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [spotlight, setSpotlight] = useState('');
+  const [topbarMenu, setTopbarMenu] = useState<'workspace' | 'notifications' | 'profile' | null>(null);
+  const [selectedExperiment, setSelectedExperiment] = useState<ActiveExperiment | null>(null);
+  const [selectedDecision, setSelectedDecision] = useState<DecisionReceiptSummary | null>(null);
   const [toast, setToast] = useState('');
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -341,10 +415,27 @@ export default function Home() {
   useEffect(() => {
     const shortcut = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); searchRef.current?.focus(); }
-      if (event.key === 'Escape') { setReviewOpen(false); setCopilotOpen(false); }
+      if (event.key === 'Escape') { setReviewOpen(false); setCopilotOpen(false); setSearchQuery(''); setTopbarMenu(null); setSelectedExperiment(null); setSelectedDecision(null); }
     };
     window.addEventListener('keydown', shortcut);
     return () => window.removeEventListener('keydown', shortcut);
+  }, []);
+
+  useEffect(() => {
+    const syncViewFromUrl = () => {
+      const requestedView = new URLSearchParams(window.location.search).get('view') ?? 'overview';
+      setActiveNav(NAV_BY_SLUG[requestedView] ?? 'Overview');
+    };
+    syncViewFromUrl();
+    window.addEventListener('popstate', syncViewFromUrl);
+    return () => window.removeEventListener('popstate', syncViewFromUrl);
+  }, []);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      setSidebarCollapsed(window.localStorage.getItem('axiom-sidebar-collapsed') === 'true');
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, []);
 
   useEffect(() => {
@@ -353,13 +444,13 @@ export default function Home() {
     // StrictMode dev double-mount mein bhi yeh pehli fetch ko ignore kara deta.
     let cancelled = false;
 
-    loadOverview('sudesh@acmecloud.example')
+    loadOverview()
       .then((payload) => { if (!cancelled) { setData(payload); setError(null); } })
       .catch((cause: unknown) => {
         if (cancelled) return;
         if (cause instanceof AxiomNetworkError) {
           setError('AXIOM API se connect nahi ho paya');
-          setHint('cd apps/api\nuvicorn app.main:app --reload --port 8000');
+          setHint('Please refresh the page. AXIOM will reconnect automatically.');
         } else if (cause instanceof AxiomApiError) {
           setError(`API error ${cause.status}: ${cause.message}`);
           setHint(null);
@@ -377,6 +468,33 @@ export default function Home() {
     window.setTimeout(() => setToast(''), 2200);
   }, []);
 
+  const activateSection = useCallback((label: string) => {
+    const targetId = NAV_TARGET_IDS[label];
+    setActiveNav(label);
+    setSpotlight(targetId);
+    setSearchQuery('');
+    setTopbarMenu(null);
+    const nextUrl = new URL(window.location.href);
+    if (label === 'Overview') nextUrl.searchParams.delete('view');
+    else nextUrl.searchParams.set('view', NAV_SLUGS[label]);
+    if (nextUrl.href !== window.location.href) window.history.pushState({ axiomView: label }, '', nextUrl);
+    window.requestAnimationFrame(() => {
+      const target = document.getElementById(targetId);
+      target?.focus({ preventScroll: true });
+      if (window.innerWidth <= 1200) target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+    window.setTimeout(() => setSpotlight((current) => current === targetId ? '' : current), 1600);
+    notify(`${label} workspace selected`);
+  }, [notify]);
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed((current) => {
+      const next = !current;
+      window.localStorage.setItem('axiom-sidebar-collapsed', String(next));
+      return next;
+    });
+  };
+
   if (error) {
     return <StatusShell title="Dashboard unavailable" message={error} hint={hint ?? undefined} />;
   }
@@ -386,30 +504,71 @@ export default function Home() {
 
   const { workspace, systemStatus, metrics, growth, bottleneck, recommendation, experiments, decisions } = data;
   const isDemoData = data.dataSource === 'demo_seed';
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const searchResults = [
+    ...navItems.map((item) => ({ label: item.label, detail: `${item.label} workspace`, nav: item.label })),
+    ...metrics.map((metric) => ({ label: metric.label, detail: `${metric.displayValue} · ${metric.comparisonLabel}`, nav: 'Analytics' })),
+    ...experiments.map((experiment) => ({ label: experiment.name, detail: `${experiment.focusMetric} · ${experiment.progressPct}% complete`, nav: 'Experiments' })),
+    ...decisions.map((decision) => ({ label: decision.title, detail: `${humanise(decision.outcome)} · ${signedPct(decision.impactPct)} impact`, nav: 'Decisions' })),
+    { label: bottleneck.stage, detail: `Detected bottleneck · ${humanise(bottleneck.severity)} severity`, nav: 'Intelligence' },
+    { label: recommendation.title, detail: `Recommended simulation · ${recommendation.confidencePct}% confidence`, nav: 'Simulations' },
+  ].filter((item) => normalizedSearch && `${item.label} ${item.detail}`.toLowerCase().includes(normalizedSearch)).slice(0, 6);
+
+  const askCopilot = (question: string) => {
+    const cleanQuestion = question.trim();
+    if (!cleanQuestion) return;
+    const lowerQuestion = cleanQuestion.toLowerCase();
+    let reply = `${bottleneck.summary} Recommended next step: ${recommendation.title}.`;
+    if (lowerQuestion.includes('experiment') || lowerQuestion.includes('recommend')) {
+      reply = `${recommendation.title}: predicted uplift ${signedPct(recommendation.predictedUpliftPct)}, ${recommendation.confidencePct}% confidence, ${humanise(recommendation.riskLevel)} risk.`;
+    } else if (lowerQuestion.includes('bottleneck') || lowerQuestion.includes('why')) {
+      reply = `${bottleneck.stage} is the current bottleneck. ${bottleneck.summary}`;
+    } else if (lowerQuestion.includes('mrr') || lowerQuestion.includes('growth')) {
+      reply = `${growth.metricLabel} is currently ${growth.currentDisplay}. The chart uses the latest ${growth.rangeLabel} evidence window.`;
+    }
+    setCopilotReply(reply);
+    setCopilotQuery('');
+    setCopilotOpen(true);
+  };
 
   return (
-    <main className="app-shell">
+    <main className={`app-shell${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
       <aside className="sidebar">
         <Brand />
         <nav aria-label="Primary navigation">
           {navItems.map(({ icon: Icon, label }) => (
-            <button onClick={() => { setActiveNav(label); notify(`${label} workspace selected`); }} className={activeNav === label ? 'nav-item active' : 'nav-item'} key={label} type="button"><i><Icon strokeWidth={1.8} /></i><span>{label}</span></button>
+            <button onClick={() => activateSection(label)} aria-current={activeNav === label ? 'page' : undefined} className={activeNav === label ? 'nav-item active' : 'nav-item'} key={label} type="button"><i><Icon strokeWidth={1.8} /></i><span>{label}</span></button>
           ))}
         </nav>
         <FiberWave className="sidebar-wave" />
         <div className="copilot-card"><strong><Sparkles /> AXIOM AI</strong><p>Ask a question or run an analysis...</p><button onClick={() => setCopilotOpen(true)} type="button" aria-label="Open AXIOM AI"><ArrowRight /></button></div>
-        <button className="collapse" type="button"><span className="collapse-icon"><ArrowLeft /></span><span>Collapse</span></button>
+        <button className="collapse" type="button" aria-pressed={sidebarCollapsed} onClick={toggleSidebar}><span className="collapse-icon"><ArrowLeft /></span><span>{sidebarCollapsed ? 'Expand' : 'Collapse'}</span></button>
       </aside>
 
       <section className="workspace">
         <header className="topbar">
-          <button onClick={() => notify(`${workspace.organizationName} · ${workspace.environment}`)} className="workspace-select" type="button"><Building2 /> {workspace.name} <ChevronDown /></button>
-          <label className="search"><Search /><input ref={searchRef} aria-label="Search" placeholder="Search metrics, experiments, insights..." /><kbd>⌘ K</kbd></label>
-          <button onClick={() => notify('You have 3 new system updates')} className="notification" aria-label="Notifications" type="button"><Bell /><b>3</b></button>
-          <button className="avatar" type="button" aria-label="Profile">{data.operatorFirstName.charAt(0).toUpperCase()}</button><ChevronDown className="profile-chevron" />
+          <button id="workspace-button" onClick={() => setTopbarMenu((current) => current === 'workspace' ? null : 'workspace')} className={`workspace-select${spotlight === 'workspace-button' ? ' spotlight' : ''}`} type="button" aria-expanded={topbarMenu === 'workspace'}><Building2 /> {workspace.name} <ChevronDown /></button>
+          <div className="search-shell">
+            <label className="search"><Search /><input ref={searchRef} value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && searchResults[0]) { event.preventDefault(); activateSection(searchResults[0].nav); } }} aria-label="Search" placeholder="Search metrics, experiments, insights..." /><kbd>⌘ K</kbd></label>
+            {normalizedSearch && (
+              <div className="search-results" role="listbox" aria-label="Search results">
+                {searchResults.length > 0 ? searchResults.map((result, index) => (
+                  <button key={`${result.nav}-${result.label}-${index}`} type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => activateSection(result.nav)}>
+                    <span>{result.label}</span><small>{result.detail}</small><ArrowRight />
+                  </button>
+                )) : <p>No AXIOM results found</p>}
+              </div>
+            )}
+          </div>
+          <button onClick={() => setTopbarMenu((current) => current === 'notifications' ? null : 'notifications')} className="notification" aria-label="Notifications" aria-expanded={topbarMenu === 'notifications'} type="button"><Bell /><b>3</b></button>
+          <button id="profile-button" className={`avatar${spotlight === 'profile-button' ? ' spotlight' : ''}`} type="button" aria-label="Profile" aria-expanded={topbarMenu === 'profile'} onClick={() => setTopbarMenu((current) => current === 'profile' ? null : 'profile')}>{data.operatorFirstName.charAt(0).toUpperCase()}</button><ChevronDown className="profile-chevron" />
+
+          {topbarMenu === 'workspace' && <div className="topbar-popover workspace-popover"><small>ACTIVE WORKSPACE</small><strong>{workspace.name}</strong><p>{workspace.organizationName}</p><dl><div><dt>Environment</dt><dd>{humanise(workspace.environment)}</dd></div><div><dt>Objective</dt><dd>{workspace.objective ?? 'Growth optimization'}</dd></div><div><dt>Data</dt><dd>{isDemoData ? 'Demo seed' : 'Ingested'}</dd></div></dl><button type="button" onClick={() => { setTopbarMenu(null); notify(data.dataSourceNote); }}><CircleCheckBig /> {systemStatus.message}</button></div>}
+          {topbarMenu === 'notifications' && <div className="topbar-popover notifications-popover"><small>3 SYSTEM UPDATES</small><button type="button" onClick={() => { setTopbarMenu(null); notify(data.dataSourceNote); }}><CircleCheckBig /><span><b>{systemStatus.label}</b><em>{systemStatus.message}</em></span></button><button type="button" onClick={() => activateSection('Intelligence')}><CircleAlert /><span><b>{bottleneck.stage}</b><em>{humanise(bottleneck.severity)} severity bottleneck</em></span></button><button type="button" onClick={() => activateSection('Simulations')}><Sparkles /><span><b>New recommendation</b><em>{recommendation.title}</em></span></button></div>}
+          {topbarMenu === 'profile' && <div className="topbar-popover profile-popover"><div className="profile-summary"><span>{data.operatorFirstName.charAt(0).toUpperCase()}</span><p><strong>{data.session?.displayName ?? data.operatorFirstName}</strong><small>{data.session?.email ?? 'AXIOM operator'}</small></p></div><button type="button" onClick={() => activateSection('Settings')}><Settings /> Workspace settings</button><button type="button" onClick={() => { setTopbarMenu(null); setCopilotOpen(true); }}><Sparkles /> Open AXIOM AI</button>{data.session?.authenticated && <button type="button" onClick={() => window.location.assign('/signout-with-chatgpt?return_to=/')}><LogOut /> Sign out</button>}<em>{workspace.name} · {humanise(workspace.environment)} · {data.storage ? `saved r${data.storage.revision}` : 'connected'}</em></div>}
         </header>
 
-        <div className="dashboard">
+        {activeNav === 'Overview' ? <div id="dashboard-overview" tabIndex={-1} className={`dashboard${spotlight === 'dashboard-overview' ? ' spotlight' : ''}`}>
           <div className="ambient-network" aria-hidden="true"><FiberWave className="horizon-wave" /></div>
           <section className="welcome-row">
             <div>
@@ -429,18 +588,18 @@ export default function Home() {
           <section className="metric-grid" aria-label="Key metrics">{metrics.map((metric, index) => <MetricCard metric={metric} index={index} key={metric.key} />)}</section>
 
           <section className="analysis-grid">
-            <article className="panel growth-panel"><header><h2>Growth Overview <Info /></h2><div><button type="button">{growth.metricLabel} <ChevronDown /></button><button type="button">{growth.rangeLabel} <ChevronDown /></button></div></header><GrowthChart growth={growth} /></article>
+            <article id="growth-panel" tabIndex={-1} className={`panel growth-panel${spotlight === 'growth-panel' ? ' spotlight' : ''}`}><header><h2>Growth Overview <Info /></h2><div><button type="button" onClick={() => notify(`${growth.metricLabel} is the active metric`)}>{growth.metricLabel} <ChevronDown /></button><button type="button" onClick={() => notify(`${growth.rangeLabel} evidence window selected`)}>{growth.rangeLabel} <ChevronDown /></button></div></header><GrowthChart growth={growth} /></article>
 
-            <article className="panel bottleneck-panel">
+            <article id="bottleneck-panel" tabIndex={-1} className={`panel bottleneck-panel${spotlight === 'bottleneck-panel' ? ' spotlight' : ''}`}>
               <header><h2><CircleAlert /> <span>Detected Bottleneck</span></h2></header>
               <h3>{bottleneck.stage}</h3>
               <div className="severity">Severity <b>{humanise(bottleneck.severity)}</b></div>
               <p>Evidence-based funnel · {bottleneck.evidenceWindowDays}-day window</p>
               <FunnelBars bottleneck={bottleneck} />
-              <button onClick={() => notify(bottleneck.summary)} className="secondary-action" type="button"><BarChart3 /> View full analysis <ArrowRight /></button>
+              <button onClick={() => { setCopilotReply(`${bottleneck.stage}: ${bottleneck.summary}`); setCopilotOpen(true); }} className="secondary-action" type="button"><BarChart3 /> View full analysis <ArrowRight /></button>
             </article>
 
-            <article className="panel recommendation-panel">
+            <article id="recommendation-panel" tabIndex={-1} className={`panel recommendation-panel${spotlight === 'recommendation-panel' ? ' spotlight' : ''}`}>
               <header><h2><Sparkles /> AXIOM Recommendation</h2></header>
               <h3>{recommendation.title}</h3>
               <div className="prediction">
@@ -453,47 +612,58 @@ export default function Home() {
           </section>
 
           <section className="operations-grid">
-            <article className="panel experiments-panel">
+            <article id="experiments-panel" tabIndex={-1} className={`panel experiments-panel${spotlight === 'experiments-panel' ? ' spotlight' : ''}`}>
               <header><h2><Beaker /> Active Experiments</h2></header><div className="table-head"><span>Experiment</span><span>Focus Metric</span><span>Status</span><span>Progress</span><span>Impact (Lift)</span></div>
               {experiments.map((experiment) => (
                 <ExperimentRow
                   key={experiment.id}
                   experiment={experiment}
-                  onSelect={() => notify(
-                    experiment.isConclusive
-                      ? `${experiment.name} — result conclusive`
-                      : `${experiment.name} — ${experiment.progressPct}% complete, not yet conclusive`,
-                  )}
+                  onSelect={() => setSelectedExperiment(experiment)}
                 />
               ))}
-              <button className="panel-link" type="button" onClick={() => { setActiveNav('Experiments'); notify('All experiments opened'); }}>View all experiments <ArrowRight /></button>
+              <button className="panel-link" type="button" onClick={() => activateSection('Experiments')}>View all experiments <ArrowRight /></button>
             </article>
 
-            <article className="panel decisions-panel">
+            <article id="decisions-panel" tabIndex={-1} className={`panel decisions-panel${spotlight === 'decisions-panel' ? ' spotlight' : ''}`}>
               <header><h2><ReceiptText /> Recent Decision Receipts</h2></header>
               <div className="decision-list">
                 {decisions.map((decision) => (
-                  <DecisionRow key={decision.id} decision={decision} onSelect={() => notify(decision.summary)} />
+                  <DecisionRow key={decision.id} decision={decision} onSelect={() => setSelectedDecision(decision)} />
                 ))}
               </div>
-              <button className="panel-link" type="button" onClick={() => { setActiveNav('Decisions'); notify('All decision receipts opened'); }}>View all decisions <ArrowRight /></button>
+              <button className="panel-link" type="button" onClick={() => activateSection('Decisions')}>View all decisions <ArrowRight /></button>
             </article>
           </section>
-        </div>
+        </div> : <SectionPages activeNav={activeNav} data={data} onOpenCopilot={(message) => { setCopilotReply(message); setCopilotOpen(true); }} onReview={() => setReviewOpen(true)} onExperiment={setSelectedExperiment} onDecision={setSelectedDecision} onNotify={notify} />}
       </section>
 
       {reviewOpen && (
         <ReviewModal
           recommendation={recommendation}
+          saving={approvalSaving}
           onClose={() => setReviewOpen(false)}
-          onApprove={() => {
-            setReviewOpen(false);
-            notify(`Experiment approved for ${recommendation.trafficPct}% canary traffic`);
+          onApprove={async () => {
+            if (approvalSaving) return;
+            setApprovalSaving(true);
+            try {
+              const updated = await approveRecommendation(recommendation.id);
+              setData(updated);
+              setReviewOpen(false);
+              notify(`Experiment approved and saved for ${recommendation.trafficPct}% canary traffic`);
+            } catch (cause) {
+              notify(cause instanceof Error ? cause.message : 'Approval could not be saved');
+            } finally {
+              setApprovalSaving(false);
+            }
           }}
         />
       )}
 
-      {copilotOpen && <aside className="copilot-drawer" aria-label="AXIOM AI"><header><span><Sparkles /> AXIOM AI</span><button type="button" aria-label="Close AXIOM AI" onClick={() => setCopilotOpen(false)}><X /></button></header><div className="copilot-message"><BrainCircuit /><p>{bottleneck.summary}</p></div><button className="prompt-chip" type="button" onClick={() => notify(recommendation.evidence[0] ?? 'Analysis started')}>Explain the bottleneck</button><button className="prompt-chip" type="button" onClick={() => setReviewOpen(true)}>Review recommended experiment</button><label><input placeholder="Ask AXIOM anything..." /><button type="button" aria-label="Send question"><Send /></button></label></aside>}
+      {selectedExperiment && <ExperimentDetailModal experiment={selectedExperiment} onClose={() => setSelectedExperiment(null)} onAnalyze={() => { setCopilotReply(`${selectedExperiment.name} is ${selectedExperiment.progressPct}% complete with ${signedPct(selectedExperiment.observedLiftPct)} observed lift. ${selectedExperiment.isConclusive ? 'The result is conclusive.' : 'More evidence is required before a decision.'}`); setSelectedExperiment(null); setCopilotOpen(true); }} />}
+
+      {selectedDecision && <DecisionDetailModal decision={selectedDecision} onClose={() => setSelectedDecision(null)} onAnalyze={() => { setCopilotReply(`${selectedDecision.title}: ${selectedDecision.summary} Measured impact was ${signedPct(selectedDecision.impactPct)}.`); setSelectedDecision(null); setCopilotOpen(true); }} />}
+
+      {copilotOpen && <aside className="copilot-drawer" aria-label="AXIOM AI"><header><span><Sparkles /> AXIOM AI</span><button type="button" aria-label="Close AXIOM AI" onClick={() => setCopilotOpen(false)}><X /></button></header><div className="copilot-message"><BrainCircuit /><p>{copilotReply || bottleneck.summary}</p></div><button className="prompt-chip" type="button" onClick={() => askCopilot('Explain the bottleneck')}>Explain the bottleneck</button><button className="prompt-chip" type="button" onClick={() => setReviewOpen(true)}>Review recommended experiment</button><form onSubmit={(event) => { event.preventDefault(); askCopilot(copilotQuery); }}><input value={copilotQuery} onChange={(event) => setCopilotQuery(event.target.value)} placeholder="Ask AXIOM anything..." aria-label="Ask AXIOM anything" /><button type="submit" aria-label="Send question"><Send /></button></form></aside>}
 
       {toast && <div className="toast" role="status"><CircleCheckBig /> {toast}</div>}
     </main>
