@@ -61,3 +61,6 @@ apps/web/.git.day1-backup/
 # Local hosting integration metadata. The shareable project configuration is
 # stored in apps/web/.axiom/.
 apps/web/.openai/
+
+# Editor-specific local launch settings
+.claude/
