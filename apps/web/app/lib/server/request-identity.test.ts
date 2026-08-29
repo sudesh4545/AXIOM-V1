@@ -15,7 +15,7 @@ describe('request identity boundary', () => {
       'oai-authenticated-user-full-name': 'Sudesh%20Mehar',
       'oai-authenticated-user-full-name-encoding': 'percent-encoded-utf-8',
     } }));
-    expect(identity).toMatchObject({ userId: 'user-123', email: 'sudesh@example.com', displayName: 'Sudesh Mehar', authenticated: true, authMode: 'chatgpt' });
+    expect(identity).toMatchObject({ userId: 'user-123', email: 'sudesh@example.com', displayName: 'Sudesh Mehar', authenticated: true, authMode: 'hosted_session' });
   });
 
   it('does not trust partial hosted identity headers', () => {

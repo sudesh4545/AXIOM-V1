@@ -3,7 +3,7 @@ export type RequestIdentity = {
   email: string;
   displayName: string;
   authenticated: boolean;
-  authMode: 'chatgpt' | 'local_development';
+  authMode: 'hosted_session' | 'local_development';
 };
 
 function decodeFullName(request: Request): string | null {
@@ -14,7 +14,7 @@ function decodeFullName(request: Request): string | null {
 }
 
 /**
- * Hosted AXIOM trusts only the identity headers injected by the Sites platform.
+ * Hosted AXIOM trusts only identity headers injected by its hosting runtime.
  * The local fallback is deliberately restricted to loopback hosts so it can
  * never become an authentication bypass on a deployed hostname.
  */
@@ -27,7 +27,7 @@ export function requestIdentity(request: Request): RequestIdentity | null {
       email: email.toLowerCase(),
       displayName: decodeFullName(request) ?? email.split('@')[0],
       authenticated: true,
-      authMode: 'chatgpt',
+      authMode: 'hosted_session',
     };
   }
 

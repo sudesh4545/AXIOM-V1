@@ -19,7 +19,7 @@ Business objective
 ```text
 AXIOM V1/
 ├── apps/
-│   ├── web/          # Next.js dashboard + same-origin API route (Cloudflare D1)
+│   ├── web/          # Next.js dashboard + same-origin API route
 │   └── api/          # FastAPI service: domain model, event ingestion (optional)
 ├── docs/             # Project context, daily reports, locked design reference
 └── README.md
@@ -43,7 +43,7 @@ limits and idempotent deduplication, Alembic migrations, a demo-data seeder, and
 **Day 3 — persistent same-origin API**
 
 The dashboard now reads and writes through its own Next.js route (`/api/v1/dashboard`) backed by
-Cloudflare D1 via Drizzle. This removed the hard dependency on a locally running FastAPI process
+the managed workspace data store via Drizzle. This removed the hard dependency on a locally running FastAPI process
 and made experiment approval persist: approving the recommended canary writes a new snapshot
 revision, appends the experiment, appends a Decision Receipt, and records an audit event. Repeated
 approval is idempotent and does not bump the revision.

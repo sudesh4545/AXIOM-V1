@@ -110,7 +110,7 @@ async function syncApprovedExperimentDelivery(payload: DashboardResponse, worksp
 
 async function loadDashboard(request: Request): Promise<{ identity: RequestIdentity; access: WorkspaceAccess; row: SnapshotRow; payload: DashboardResponse } | Response> {
   const identity = requestIdentity(request);
-  if (!identity) return json({ code: 'authentication_required', message: 'Sign in with ChatGPT to open AXIOM.', details: null }, 401);
+  if (!identity) return json({ code: 'authentication_required', message: 'Sign in to open AXIOM.', details: null }, 401);
 
   await ensureDatabase();
   const now = new Date().toISOString();

@@ -7,7 +7,7 @@ FastAPI service for AXIOM's domain model, dashboard contract and event ingestion
 Read this first, because it changes how you run the project.
 
 The web app **no longer requires this service to start**. Since Day 3 the dashboard is served
-by a same-origin Next.js route (`apps/web/app/api/v1/dashboard/route.ts`) backed by Cloudflare D1,
+by a same-origin Next.js route (`apps/web/app/api/v1/dashboard/route.ts`) backed by the managed workspace store,
 so `npm run dev` in `apps/web` works on its own.
 
 This FastAPI service remains in the repository because it holds work the D1 route does not yet cover:
@@ -28,7 +28,7 @@ To point the web app at this service instead of the same-origin route, set the f
 NEXT_PUBLIC_AXIOM_API_URL=http://127.0.0.1:8000
 ```
 
-Leaving it blank (the default) uses the same-origin D1 route.
+Leaving it blank (the default) uses the same-origin workspace route.
 
 ## Local setup
 

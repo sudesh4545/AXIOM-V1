@@ -12,7 +12,7 @@ identified as the cause of every visibly wrong line in the UI.
 ## Part 1 — Persistent same-origin API
 
 `apps/web/app/api/v1/dashboard/route.ts` serves the dashboard from the same origin as the app,
-backed by Cloudflare D1 through Drizzle.
+backed by the workspace data store through Drizzle.
 
 Implemented:
 
@@ -24,7 +24,7 @@ Implemented:
   through `db.batch()` so they land together or not at all.
 - Schema bootstrapping for `axiom_users`, `dashboard_snapshots` and `audit_events`, with indexes on
   the columns actually queried (`axiom_users.email`, and `audit_events (user_id, created_at)`).
-- `apps/web/.openai/hosting.json` now declares the `DB` binding.
+- `apps/web/.axiom/hosting.json` declares the local `DB` binding.
 - Drizzle schema and generated migration under `apps/web/db` and `apps/web/drizzle`.
 
 The FastAPI service became optional rather than removed. `NEXT_PUBLIC_AXIOM_API_URL` still switches
@@ -32,8 +32,8 @@ the client to it; blank — the new default — uses the same-origin route.
 
 ### Design decisions worth defending
 
-**No connection string anywhere in source.** `db/index.ts` reaches D1 through the
-`cloudflare:workers` environment binding, and `drizzle.config.ts` carries no URL. There is nothing
+**No connection string anywhere in source.** `db/index.ts` reaches the managed store through the
+runtime environment binding, and `drizzle.config.ts` carries no URL. There is nothing
 to leak because there is no credential to commit.
 
 **Approval is idempotent.** Re-approving an already-approved recommendation returns the current
@@ -56,7 +56,7 @@ operator. This is not authentication and is scheduled to be replaced.
 Against the running local server:
 
 - `GET /api/v1/dashboard` — 200, `storage.state: connected`, snapshot read back from a previous
-  session, so D1 persistence is genuinely working rather than being regenerated per request.
+session, so persistence is genuinely working rather than being regenerated per request.
 - Approval state persisted across restarts: revision 2, with `approved-demo-recommendation-invite`
   in experiments and `approval-demo-recommendation-invite` in decisions.
 - Re-approve — 200, revision stayed 2, no duplicate rows.

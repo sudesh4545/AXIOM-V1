@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://axiom-v1-sudesh.rankpushidff4.chatgpt.site'),
   title: 'AXIOM — Verified Experimentation OS',
   description: 'Turn business objectives into safe, measurable and verified experiments.',
   openGraph: {

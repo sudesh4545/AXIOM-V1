@@ -36,7 +36,7 @@ PostHog / Stripe / AXIOM SDK
 ## Runtime boundaries
 
 - `apps/web` is the working modular monolith. Vinext serves the interface and same-origin APIs.
-- Cloudflare D1/SQLite stores workspace product state. Every product query carries a workspace key.
+- A managed SQLite-compatible store holds workspace product state. Every product query carries a workspace key.
 - Sites identity headers identify hosted users; loopback receives an explicit development identity.
 - The FastAPI application is retained as the PostgreSQL-oriented scale-up path and regression suite.
 - Product event writes are idempotent. Experiment delivery is bounded, sticky and reversible.
@@ -54,8 +54,7 @@ PostHog / Stripe / AXIOM SDK
 
 ## Scaling path
 
-- Move high-volume event analytics from D1 to PostgreSQL/ClickHouse only when measured load needs it.
+- Move high-volume event analytics from the workspace store to PostgreSQL/ClickHouse only when measured load needs it.
 - Place ingestion behind a durable queue when synchronous adapter latency becomes a constraint.
 - Replace the V1 normal approximation with an always-valid sequential method before high-stakes use.
 - Add managed secret-backed OAuth for external connectors; current adapters are governed webhook endpoints.
-

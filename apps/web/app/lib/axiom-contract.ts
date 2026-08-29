@@ -233,7 +233,7 @@ export interface DashboardResponse {
     email: string;
     displayName: string;
     authenticated: boolean;
-    authMode: 'chatgpt' | 'local_development';
+    authMode: 'hosted_session' | 'local_development';
   };
   /** Server-authorized organization membership and switchable workspaces. */
   workspaceContext?: {

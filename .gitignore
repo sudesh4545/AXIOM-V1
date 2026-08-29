@@ -57,3 +57,7 @@ logs/
 #
 # Wapas chahiye ho to:  mv apps/web/.git.day1-backup apps/web/.git
 apps/web/.git.day1-backup/
+
+# Local hosting integration metadata. The shareable project configuration is
+# stored in apps/web/.axiom/.
+apps/web/.openai/

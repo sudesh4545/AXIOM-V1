@@ -4,7 +4,7 @@ Verified on 29 August 2026 after the Day 1–30 acceptance pass.
 
 ## Defects found and closed
 
-1. Patched the production/runtime dependency chain: Next.js, React, Vinext, Vite and Cloudflare tooling
+1. Patched the production/runtime dependency chain: Next.js, React, Vinext, Vite and edge-runtime tooling
    were upgraded to compatible fixed releases. `npm audit` now reports zero vulnerabilities.
 2. Removed the final lint warning by using the platform sign-out link as a real navigation element.
 3. Added the JSON import attribute required by the current Vite native-config direction.
