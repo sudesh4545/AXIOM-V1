@@ -1,4 +1,3 @@
-import { sites } from '@openai/sites-vite-plugin';
 import tailwindcss from '@tailwindcss/postcss';
 import vinext from 'vinext';
 import { defineConfig } from 'vite';
@@ -11,11 +10,12 @@ const { d1, r2 } = hostingConfig;
 
 // Some constrained development environments need polling for HMR.
 const isConstrainedDevelopmentEnvironment = process.env.AXIOM_CONSTRAINED_DEV === 'true';
+const isCloudflareDeploymentBuild = process.env.AXIOM_CLOUDFLARE_DEPLOY === 'true';
 
 const localBindingConfig = {
   main: 'vinext/server/app-router-entry',
   compatibility_flags: ['nodejs_compat'],
-  d1_databases: d1
+  d1_databases: d1 && !isCloudflareDeploymentBuild
     ? [
         {
           binding: d1,
@@ -24,7 +24,7 @@ const localBindingConfig = {
         },
       ]
     : [],
-  r2_buckets: r2
+  r2_buckets: r2 && !isCloudflareDeploymentBuild
     ? [
         {
           binding: r2,
@@ -51,7 +51,6 @@ export default defineConfig(async () => {
       : undefined,
     plugins: [
       vinext(),
-      sites(),
       cloudflare({
         viteEnvironment: { name: 'rsc', childEnvironments: ['ssr'] },
         config: localBindingConfig,
