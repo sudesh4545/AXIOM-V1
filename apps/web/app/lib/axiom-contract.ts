@@ -233,7 +233,7 @@ export interface DashboardResponse {
     email: string;
     displayName: string;
     authenticated: boolean;
-    authMode: 'hosted_session' | 'local_development';
+    authMode: 'hosted_session' | 'local_development' | 'public_demo';
   };
   /** Server-authorized organization membership and switchable workspaces. */
   workspaceContext?: {

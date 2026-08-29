@@ -18,6 +18,11 @@ describe('request identity boundary', () => {
     expect(identity).toMatchObject({ userId: 'user-123', email: 'sudesh@example.com', displayName: 'Sudesh Mehar', authenticated: true, authMode: 'hosted_session' });
   });
 
+  it('allows the public demo identity only on the AXIOM Workers hostname', () => {
+    expect(requestIdentity(new Request('https://axiom-v1.sudeshmehar3.workers.dev/api'))?.authMode).toBe('public_demo');
+    expect(requestIdentity(new Request('https://axiom-v1.attacker.workers.dev/api'))).toBeNull();
+  });
+
   it('does not trust partial hosted identity headers', () => {
     expect(requestIdentity(new Request('https://axiom.example/api', { headers: { 'oai-authenticated-user-email': 'user@example.com' } }))).toBeNull();
   });

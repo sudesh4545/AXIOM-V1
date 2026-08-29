@@ -3,7 +3,7 @@ export type RequestIdentity = {
   email: string;
   displayName: string;
   authenticated: boolean;
-  authMode: 'hosted_session' | 'local_development';
+  authMode: 'hosted_session' | 'local_development' | 'public_demo';
 };
 
 function decodeFullName(request: Request): string | null {
@@ -32,6 +32,16 @@ export function requestIdentity(request: Request): RequestIdentity | null {
   }
 
   const hostname = new URL(request.url).hostname;
+  if (hostname === 'axiom-v1.sudeshmehar3.workers.dev') {
+    return {
+      userId: 'public-demo-user',
+      email: 'demo@axiom.dev',
+      displayName: 'Sudesh',
+      authenticated: false,
+      authMode: 'public_demo',
+    };
+  }
+
   if (['localhost', '127.0.0.1', '::1'].includes(hostname)) {
     return {
       userId: 'local-development-user',
