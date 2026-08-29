@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AXIOM V1 — Growth Operations</title>
+    <meta name="description" content="AXIOM V1 experimentation operations dashboard." />
+    <style>
+      :root { color-scheme: dark; --ink:#edf4ff; --muted:#91a5c7; --cyan:#22d9ff; --violet:#9e55ff; --green:#2df2a1; --card:rgba(8,22,54,.78); }
+      * { box-sizing:border-box; }
+      body { margin:0; min-height:100vh; font-family:Inter,ui-sans-serif,system-ui,sans-serif; color:var(--ink); background:radial-gradient(circle at 70% -10%,#1a1675 0,transparent 34%),radial-gradient(circle at 25% 100%,#032e65 0,transparent 42%),#030916; }
+      body:before { content:""; position:fixed; inset:0; pointer-events:none; opacity:.45; background-image:radial-gradient(#22d9ff 1px,transparent 1px),radial-gradient(#9e55ff 1px,transparent 1px); background-size:38px 38px,61px 61px; background-position:0 0,16px 14px; mask-image:linear-gradient(to bottom,black,transparent 90%); }
+      main { position:relative; max-width:1240px; margin:auto; padding:32px 22px 52px; }
+      header { display:flex; justify-content:space-between; align-items:center; gap:20px; border-bottom:1px solid #1c416b; padding-bottom:24px; }
+      .brand { font-weight:850; letter-spacing:.08em; font-size:30px; text-shadow:0 0 20px #1da8ff; } .brand i { font-style:normal; color:#d175ff; }
+      .tag { border:1px solid #2074b8; border-radius:999px; padding:8px 12px; color:#a7dcff; font-size:13px; }
+      h1 { font-size:clamp(30px,5vw,54px); margin:44px 0 8px; letter-spacing:-.04em; } .subtitle { margin:0 0 28px; color:var(--muted); font-size:17px; }
+      .metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; } .card { background:linear-gradient(145deg,rgba(11,36,80,.9),var(--card)); border:1px solid #176fbb; border-radius:18px; padding:19px; box-shadow:inset 0 1px 0 #378bd13d,0 0 25px #0077ff1d; }
+      .card:nth-child(2),.card:nth-child(4){border-color:#8a4ce5}.label { color:#b9c7e0; font-size:14px; }.value { font-size:36px; font-weight:800; margin:9px 0; }.rise { color:var(--green); font-size:14px; }
+      .grid { display:grid; grid-template-columns:1.6fr 1fr; gap:14px; margin-top:14px; }.wide { min-height:282px; }.title { font-size:17px; font-weight:750; margin-bottom:16px; }.chart { height:190px; display:flex; align-items:end; gap:10px; padding:14px 4px 0; border-bottom:1px solid #24527f; background:linear-gradient(transparent 24%,#18477b40 25%,transparent 26%,transparent 49%,#18477b40 50%,transparent 51%,transparent 74%,#18477b40 75%,transparent 76%); }.bar { flex:1; background:linear-gradient(to top,#0766c8,#1ce6ff); border-radius:5px 5px 0 0; box-shadow:0 0 16px #17d5ff80; }
+      .recommendation { border-color:#9454e7; background:linear-gradient(145deg,rgba(36,17,81,.85),var(--card)); }.lift { color:var(--green); font-size:42px; font-weight:850; }.action { display:block; text-align:center; text-decoration:none; color:white; margin-top:28px; padding:12px; border-radius:10px; background:linear-gradient(90deg,#078cec,#8249ff); border:1px solid #4ce4ff; font-weight:700; }
+      footer { color:#7387a7; font-size:13px; text-align:center; margin-top:30px; } @media(max-width:760px){header{align-items:flex-start;flex-direction:column} .metrics{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.value{font-size:29px}}
+    </style>
+  </head>
+  <body>
+    <main>
+      <header><div class="brand">A<i>X</i>IOM <small class="tag">V1</small></div><span class="tag">● Dashboard demo</span></header>
+      <h1>Growth, measured with confidence.</h1><p class="subtitle">AXIOM turns product signals into governed experiments and clear decisions.</p>
+      <section class="metrics"><article class="card"><div class="label">MRR</div><div class="value">₹8.4L</div><div class="rise">↑ 12.4% vs prior window</div></article><article class="card"><div class="label">Activation</div><div class="value">38.6%</div><div class="rise">↑ 4.2% vs prior window</div></article><article class="card"><div class="label">Trial conversion</div><div class="value">14.8%</div><div class="rise">↑ 2.1% vs prior window</div></article><article class="card"><div class="label">Churn</div><div class="value">3.2%</div><div class="rise">↓ 0.6% vs prior window</div></article></section>
+      <section class="grid"><article class="card wide"><div class="title">Growth overview</div><div class="chart"><i class="bar" style="height:28%"></i><i class="bar" style="height:36%"></i><i class="bar" style="height:42%"></i><i class="bar" style="height:48%"></i><i class="bar" style="height:55%"></i><i class="bar" style="height:51%"></i><i class="bar" style="height:67%"></i><i class="bar" style="height:74%"></i><i class="bar" style="height:88%"></i></div><p class="rise">● MRR growth signal is healthy</p></article><article class="card recommendation"><div class="title">AXIOM recommendation</div><h2>Move team invitation into onboarding step 2</h2><p class="label">Predicted activation uplift</p><div class="lift">+7.2%</div><p class="label">Human approval and safety review required before launch.</p><a class="action" href="https://github.com/sudesh4545/AXIOM-V1">View AXIOM source →</a></article></section>
+      <footer>AXIOM V1 · GitHub Pages dashboard demo</footer>
+    </main>
+  </body>
+</html>
