@@ -147,3 +147,11 @@ sets a property inside a `@media` block has to be patched there too.
 
 Day 4 should replace development-grade identity with real authentication, then build organizations
 and workspaces on top of it.
+
+## Closure update — 29 August 2026
+
+The two open Day 3 checks are now closed. Browser QA at 1366×768 / 100% zoom confirmed no document
+scroll, panel clipping or action overlap, including the recommendation action's permanent internal
+bottom gap and the four-row experiment state. The former FastAPI/D1 ambiguity was also resolved on
+Day 5: D1 is the working same-origin Sites path for dashboard state and event ingestion, while the
+FastAPI/PostgreSQL implementation remains the optional analytics scale-up path.

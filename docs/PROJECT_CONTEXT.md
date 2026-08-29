@@ -306,7 +306,7 @@ This is a direction, not a requirement to create empty microservices. Implementa
 
 The earlier long-term discussion mentioned Kafka/Redpanda, ClickHouse, graph systems, OpenTelemetry and Kubernetes. These remain architectural evolution paths, not mandatory V1 dependencies.
 
-**Deviation recorded on Day 3.** Persistent dashboard state is stored in Cloudflare D1 (SQLite) rather than PostgreSQL, because the web app is deployed as a Cloudflare-hosted Site and D1 is the persistence available at the same origin with no separate process to run. The PostgreSQL-ready model in `apps/api` is unchanged and its migration path still holds. The practical split today is: D1 for per-operator application state, PostgreSQL for the relational/analytics model when ingestion goes live.
+**Deviation recorded on Day 3 and refined on Day 5.** Persistent dashboard state and the first same-origin event-ingestion path are stored in Cloudflare D1 (SQLite), because the web app is a Cloudflare-hosted Site and D1 is the persistence available at the same origin with no separate process to run. The PostgreSQL-ready model in `apps/api` is unchanged and remains the scale-up path for heavier analytics. The practical split today is: D1 powers the working customer-demo path; FastAPI/PostgreSQL remains the optional analytics-oriented backend path.
 
 ## Interview understanding requirement
 
@@ -345,6 +345,27 @@ No project can guarantee hiring, and absolute worldwide novelty cannot be proven
 
 ## Current state
 
+**Update — Days 26–30 (29 August 2026).** The 30-day V1 loop is complete. CompanyGym-lite runs
+persisted scenario simulations with explicit uncertainty and non-causal disclosure. Durable rate-limit
+windows, browser/API security headers and a workspace operations endpoint add release safeguards and
+health/SLO visibility. Architecture, incident/recovery runbook, final case study and the Day 1–30
+acceptance matrix are in `docs/ARCHITECTURE.md`, `docs/OPERATIONS_RUNBOOK.md`, `docs/CASE_STUDY.md`
+and `docs/DAY_01_30_VERIFICATION.md`.
+
+**Update — Days 18–25 (29 August 2026).** AXIOM now persists primary outcomes after verified
+assignment/exposure, computes a conservative randomized two-proportion analysis, normalizes
+PostHog/Stripe-style payloads, applies workspace risk policies, automatically rolls back harmful
+guardrail results and writes detailed immutable Decision Receipts. A live Sandbox harm scenario
+successfully produced a terminal rollback and receipt that survived restart. See
+`docs/DAY_18_25_REPORT.md` and `docs/DAY_01_25_VERIFICATION.md`.
+
+**Update — Days 11–17 (29 August 2026).** AXIOM now turns each governed bottleneck into a
+deterministically ranked three-candidate opportunity portfolio with evidence, assumptions, expected
+lift, confidence, risk, delivery effort, reversibility and score breakdown. Human approval persists
+an experiment definition and feature flag. The same-origin experiment API supports sticky bounded
+assignment, idempotent exposure tracking and audited pause/resume/terminal rollback. See
+`docs/DAY_11_17_REPORT.md` and `docs/DAY_01_17_VERIFICATION.md`.
+
 - Project location: `C:\Users\sudes\OneDrive\Desktop\New folder (7)\AXIOM V1`
 - The previous discussion is now imported into this continuity document.
 - Product delivery decision: AXIOM V1 will be a desktop-first SaaS web application with a public marketing website and a responsive mobile-browser experience. A native Android/iOS companion app is a future phase for alerts, approvals and emergency rollback, not part of the 30-day V1.
@@ -352,9 +373,12 @@ No project can guarantee hiring, and absolute worldwide novelty cannot be proven
 - Day 1 implementation is located in `apps/web`. The responsive overview, KPI cards, growth chart, bottleneck funnel, recommendation review, active experiments, Decision Receipts and AI drawer interactions are implemented. All displayed business numbers remain explicit demo data until the backend and event-ingestion milestones connect real sources.
 - Day 2 implementation is located in `apps/api`: a FastAPI service with a PostgreSQL-ready domain model (organizations, workspaces, users, events), tenant-scoped access, a typed dashboard contract mirrored in TypeScript, event ingestion with batch limits and idempotent deduplication, Alembic migrations, a demo-data seeder and 61 tests. See `docs/DAY_02_REPORT.md`.
 - Day 3 made dashboard state persistent per operator through a same-origin Next.js route (`apps/web/app/api/v1/dashboard/route.ts`) backed by Cloudflare D1 via Drizzle. Experiment approval is now a real write: it bumps a snapshot revision, appends the experiment and a Decision Receipt, and records an audit event, all idempotently. The chart and sparkline rendering was rebuilt on SVG polylines after a pixel-versus-percentage unit-mixing bug was identified as the cause of every wrong line in the UI. See `docs/DAY_03_REPORT.md`.
+- Day 4 added platform-backed hosted identity, local-loopback development identity, organizations, memberships, production/sandbox workspaces, persisted active-workspace preferences and server-authorized workspace switching. Dashboard snapshots are now isolated by both user and workspace. See `docs/DAY_04_REPORT.md`.
+- Day 5 added `GET/POST /api/v1/events`, workspace-scoped D1 event storage, 100-event batch limits, payload-size validation, idempotent retry protection, source connection state and ingestion telemetry on the redesigned Integrations page. See `docs/DAY_05_REPORT.md`.
+- Days 6–10 added the governed event taxonomy and the first complete event-to-insight pipeline: lifecycle/product/revenue validation, MRR, activation, trial conversion, churn, 30-day MRR history, sequential funnels, D7/D30 retention, evidence sufficiency and deterministic bottleneck scoring. A workspace changes from `demo_seed` to `ingested` only after the evidence gate passes. Acme Sandbox contains a clearly synthetic 40-user verification cohort; Acme Cloud Production remains untouched and continues to show labelled demo data. See `docs/DAY_06_10_REPORT.md`.
 - The web app therefore no longer requires a separate backend process to run. `NEXT_PUBLIC_AXIOM_API_URL` remains as an optional override that points the client back at the FastAPI service; blank is the default and selects the same-origin route.
-- Open architectural question, not yet decided: event ingestion, the relational model and Alembic exist only in `apps/api`, while per-operator dashboard state exists only in D1. Either ingestion is ported into the Next route, or both surfaces are kept with a documented division of responsibility.
-- Identity handling in both API surfaces is development-grade and is explicitly not authentication. The FastAPI service reads an operator email from a request header; the Next route trusts platform-provided headers and falls back to a fixed local operator on `localhost`. Both are marked temporary in code.
-- Unverified: whether the current UI visually matches `docs/design/axiom-dashboard-final-reference.png`. Day 3 verification was numeric only, because the browser preview pane was unavailable for screenshots. Layout geometry is measured correct; the visual comparison still needs a human pass.
+- The architecture decision is now explicit: the same-origin D1 path is the working Sites application path; the FastAPI/PostgreSQL implementation is retained as the optional scale-up path rather than being required for the dashboard to function.
+- Hosted identity is taken only from trusted Sites platform headers. A fixed identity fallback is allowed only on loopback so local development stays usable. The FastAPI service still has its separate development-grade header identity.
+- Day 3–5 browser verification was completed at 1366×768 / 100% browser zoom. The Overview and Integrations pages have no document scroll, horizontal overflow or panel clipping; the recommendation action keeps a measured internal bottom gap.
 - No implementation decisions beyond this document should be assumed final until the repository and local environment are inspected.
-- Next action: begin Day 4 by replacing development-grade identity with real authentication, then build organizations and workspaces on top of it.
+- Next action: Day 11 should harden metric definitions and cohort edge cases, then Day 12 begins the AI hypothesis/opportunity engine.

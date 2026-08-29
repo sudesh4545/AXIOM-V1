@@ -96,6 +96,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.middleware("http")
+async def disable_legacy_data_api_outside_local(request: Request, call_next):
+    """Fail closed if the local compatibility data API is deployed by mistake."""
+    legacy_prefix = f"{settings.api_v1_prefix}/workspaces"
+    if settings.environment != "local" and request.url.path.startswith(legacy_prefix):
+        return JSONResponse(
+            status_code=503,
+            content=ErrorDetail(
+                code="legacy_api_disabled",
+                message="The legacy workspace API is available only in local development.",
+            ).model_dump(by_alias=True),
+        )
+    return await call_next(request)
+
 app.include_router(api_router, prefix=settings.api_v1_prefix)
 
 

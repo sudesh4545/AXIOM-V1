@@ -5,9 +5,10 @@ bada risk hai ki koi route handler `WHERE organization_id = ...` bhoolta hai.
 Isse bachne ka tareeka: workspace lookup ko ek hi dependency mein rakho, aur
 routes ko kabhi raw id se query karne hi na do.
 
-Day 4 (auth milestone) pe `get_current_user` real JWT/session verification
-karega. Abhi woh explicit header se aata hai aur clearly TODO marked hai —
-production mein yeh authentication **nahi** hai.
+This module belongs to the optional local-only FastAPI compatibility service.
+Its email header personalises local demo responses; it is not authentication.
+`app.main` disables all legacy workspace data routes outside the local environment,
+so this compatibility path cannot be mistaken for the authenticated Sites API.
 """
 
 from __future__ import annotations
@@ -63,18 +64,16 @@ async def get_current_user(
     session: SessionDep,
     x_axiom_user_email: Annotated[
         str | None,
-        Header(description="TEMPORARY: operator email. Day 4 pe real auth se replace hoga."),
+        Header(description="Local compatibility-service personalisation email; not authentication."),
     ] = None,
 ) -> User | None:
     """Current operator.
 
     !!! WARNING — YEH AUTHENTICATION NAHI HAI !!!
-    Ek header se email padhna trivially spoofable hai. Yeh sirf Day 2 ka
-    placeholder hai taaki dashboard "Good morning, <naam>" dikha sake jab tak
-    Day 4 ka auth milestone nahi aata.
-
-    Isse production mein kabhi deploy nahi karna hai. Day 4 pe yeh function
-    signed session/JWT verify karega.
+    Ek header se email padhna trivially spoofable hai. Isliye yeh sirf local
+    compatibility service mein personalisation deta hai. Non-local workspace
+    routes application middleware se disabled hain; working Sites API apni
+    trusted hosted identity aur server-side membership checks use karti hai.
     """
     if not x_axiom_user_email:
         return None

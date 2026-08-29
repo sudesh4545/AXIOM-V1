@@ -49,8 +49,8 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173"
 
     # --- Ingestion limits ---
-    # Rate limiting Day 28 ka kaam hai; yeh cap us se pehle ka basic guard hai
-    # taaki ek hi request se memory na bhar jaaye.
+    # Compatibility-service batch cap. The working same-origin API also has
+    # durable request throttling and stricter per-event limits.
     max_events_per_request: int = 500
 
     @property

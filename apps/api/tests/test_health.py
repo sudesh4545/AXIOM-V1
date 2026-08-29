@@ -47,3 +47,17 @@ async def test_openapi_schema_is_valid(client: AsyncClient) -> None:
     schema = response.json()
     assert "/api/v1/workspaces/{workspace_id}/dashboard" in schema["paths"]
     assert "/api/v1/workspaces/{workspace_id}/events" in schema["paths"]
+
+
+async def test_legacy_workspace_api_fails_closed_outside_local(
+    client: AsyncClient, monkeypatch
+) -> None:
+    from app.main import settings
+
+    monkeypatch.setattr(settings, "environment", "production")
+    response = await client.get("/api/v1/workspaces")
+    assert response.status_code == 503
+    assert response.json()["code"] == "legacy_api_disabled"
+
+    health = await client.get("/api/v1/health")
+    assert health.status_code == 200

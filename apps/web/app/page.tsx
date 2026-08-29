@@ -5,12 +5,12 @@ import type { CSSProperties } from 'react';
 import {
   Activity, ArrowLeft, ArrowRight, BarChart3, Beaker, Bell, BrainCircuit,
   Building2, ChevronDown, CircleAlert, CircleCheckBig, CircleX, FlaskConical,
-  Funnel, Home as HomeIcon, IndianRupee, Info, Network, Puzzle, ReceiptText,
-  LogOut, Search, Send, Settings, ShieldCheck, Sparkles, Timer, Users, X, Zap,
+  Funnel, Home as HomeIcon, IndianRupee, Info, Moon, Network, Puzzle, ReceiptText,
+  LogOut, Search, Send, Settings, ShieldCheck, Sparkles, Sun, Timer, Users, X, Zap,
   type LucideIcon,
 } from 'lucide-react';
 
-import { approveRecommendation, AxiomApiError, AxiomNetworkError, loadOverview } from './lib/axiom-api';
+import { approveRecommendation, AxiomApiError, AxiomNetworkError, controlExperiment, loadOverview, selectWorkspace } from './lib/axiom-api';
 import { SectionPages } from './section-pages';
 import type {
   ActiveExperiment,
@@ -62,6 +62,8 @@ const NAV_SLUGS: Record<string, string> = {
 };
 
 const NAV_BY_SLUG = Object.fromEntries(Object.entries(NAV_SLUGS).map(([label, slug]) => [slug, label]));
+
+type AxiomTheme = 'dark' | 'light' | 'neon';
 
 /** Metric `key` -> icon. Naya metric aaya to fallback icon milta hai, crash nahi. */
 const METRIC_ICONS: Record<string, LucideIcon> = {
@@ -286,7 +288,7 @@ function DecisionRow({ decision, onSelect }: { decision: DecisionReceiptSummary;
   );
 }
 
-function ExperimentDetailModal({ experiment, onClose, onAnalyze }: { experiment: ActiveExperiment; onClose: () => void; onAnalyze: () => void }) {
+function ExperimentDetailModal({ experiment, onClose, onAnalyze, onControl, saving }: { experiment: ActiveExperiment; onClose: () => void; onAnalyze: () => void; onControl: (action: 'pause' | 'resume' | 'rollback') => void; saving: boolean }) {
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
       <section className="review-modal" role="dialog" aria-modal="true" aria-labelledby="experiment-detail-title" onMouseDown={(event) => event.stopPropagation()}>
@@ -303,7 +305,8 @@ function ExperimentDetailModal({ experiment, onClose, onAnalyze }: { experiment:
           {experiment.guardrailBreached ? <CircleAlert /> : <ShieldCheck />}
           <span><b>{experiment.guardrailBreached ? 'Guardrail attention required' : 'Guardrails healthy'}</b><small>{experiment.isConclusive ? 'Evidence threshold reached' : 'Sequential test is still running'}</small></span>
         </div>
-        <div className="modal-actions"><button type="button" onClick={onClose}>Close</button><button type="button" onClick={onAnalyze}><BrainCircuit /> Analyze with AXIOM</button></div>
+        {experiment.analysis && <div className="experiment-analysis-summary"><span><small>CONTROL / TREATMENT</small><b>{experiment.analysis.controlSubjects} / {experiment.analysis.treatmentSubjects}</b></span><span><small>P(TREATMENT BETTER)</small><b>{experiment.analysis.probabilityTreatmentBetterPct}%</b></span><span><small>95% INTERVAL</small><b>{experiment.analysis.confidenceIntervalPct[0]}% to {experiment.analysis.confidenceIntervalPct[1]}%</b></span><p>{experiment.analysis.rationale}</p></div>}
+        <div className="modal-actions"><button type="button" onClick={onClose}>Close</button>{experiment.id.startsWith('approved-') && experiment.status !== 'rolled_back' && <button type="button" disabled={saving} onClick={() => onControl(experiment.status === 'paused' ? 'resume' : 'pause')}><Timer /> {experiment.status === 'paused' ? 'Resume' : 'Pause'}</button>}{experiment.id.startsWith('approved-') && experiment.status !== 'rolled_back' && <button type="button" disabled={saving} onClick={() => onControl('rollback')}><CircleX /> Roll back</button>}<button type="button" onClick={onAnalyze}><BrainCircuit /> Analyze with AXIOM</button></div>
       </section>
     </div>
   );
@@ -395,9 +398,12 @@ function StatusShell({ title, message, hint }: { title: string; message: string;
 
 export default function Home() {
   const [activeNav, setActiveNav] = useState('Overview');
+  const [theme, setTheme] = useState<AxiomTheme>('neon');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [approvalSaving, setApprovalSaving] = useState(false);
+  const [experimentActionSaving, setExperimentActionSaving] = useState(false);
+  const [workspaceSwitching, setWorkspaceSwitching] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [copilotQuery, setCopilotQuery] = useState('');
   const [copilotReply, setCopilotReply] = useState('');
@@ -434,6 +440,12 @@ export default function Home() {
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
       setSidebarCollapsed(window.localStorage.getItem('axiom-sidebar-collapsed') === 'true');
+      const savedTheme = window.localStorage.getItem('axiom-theme');
+      const initialTheme: AxiomTheme = savedTheme === 'dark' || savedTheme === 'light' || savedTheme === 'neon'
+        ? savedTheme
+        : window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      setTheme(initialTheme);
+      document.documentElement.dataset.theme = initialTheme;
     });
     return () => window.cancelAnimationFrame(frame);
   }, []);
@@ -495,6 +507,13 @@ export default function Home() {
     });
   };
 
+  const selectTheme = (nextTheme: AxiomTheme) => {
+    setTheme(nextTheme);
+    window.localStorage.setItem('axiom-theme', nextTheme);
+    document.documentElement.dataset.theme = nextTheme;
+    notify(`${nextTheme.charAt(0).toUpperCase() + nextTheme.slice(1)} appearance selected`);
+  };
+
   if (error) {
     return <StatusShell title="Dashboard unavailable" message={error} hint={hint ?? undefined} />;
   }
@@ -503,6 +522,7 @@ export default function Home() {
   }
 
   const { workspace, systemStatus, metrics, growth, bottleneck, recommendation, experiments, decisions } = data;
+  const availableWorkspaces = data.workspaceContext?.availableWorkspaces ?? [workspace];
   const isDemoData = data.dataSource === 'demo_seed';
   const normalizedSearch = searchQuery.trim().toLowerCase();
   const searchResults = [
@@ -531,8 +551,23 @@ export default function Home() {
     setCopilotOpen(true);
   };
 
+  const changeWorkspace = async (workspaceId: string) => {
+    if (workspaceSwitching || workspaceId === workspace.id) { setTopbarMenu(null); return; }
+    setWorkspaceSwitching(true);
+    try {
+      const updated = await selectWorkspace(workspaceId);
+      setData(updated);
+      setTopbarMenu(null);
+      notify(`${updated.workspace.name} workspace selected`);
+    } catch (cause) {
+      notify(cause instanceof Error ? cause.message : 'Workspace could not be selected');
+    } finally {
+      setWorkspaceSwitching(false);
+    }
+  };
+
   return (
-    <main className={`app-shell${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
+    <main className={`app-shell theme-${theme}${sidebarCollapsed ? ' sidebar-collapsed' : ''}`} data-theme={theme}>
       <aside className="sidebar">
         <Brand />
         <nav aria-label="Primary navigation">
@@ -560,12 +595,17 @@ export default function Home() {
               </div>
             )}
           </div>
+          <div className="theme-switcher" role="group" aria-label="Appearance theme">
+            <button type="button" className={theme === 'light' ? 'active' : ''} aria-pressed={theme === 'light'} onClick={() => selectTheme('light')} title="Light mode"><Sun /><span>Light</span></button>
+            <button type="button" className={theme === 'dark' ? 'active' : ''} aria-pressed={theme === 'dark'} onClick={() => selectTheme('dark')} title="Dark mode"><Moon /><span>Dark</span></button>
+            <button type="button" className={theme === 'neon' ? 'active' : ''} aria-pressed={theme === 'neon'} onClick={() => selectTheme('neon')} title="Neon mode"><Sparkles /><span>Neon</span></button>
+          </div>
           <button onClick={() => setTopbarMenu((current) => current === 'notifications' ? null : 'notifications')} className="notification" aria-label="Notifications" aria-expanded={topbarMenu === 'notifications'} type="button"><Bell /><b>3</b></button>
           <button id="profile-button" className={`avatar${spotlight === 'profile-button' ? ' spotlight' : ''}`} type="button" aria-label="Profile" aria-expanded={topbarMenu === 'profile'} onClick={() => setTopbarMenu((current) => current === 'profile' ? null : 'profile')}>{data.operatorFirstName.charAt(0).toUpperCase()}</button><ChevronDown className="profile-chevron" />
 
-          {topbarMenu === 'workspace' && <div className="topbar-popover workspace-popover"><small>ACTIVE WORKSPACE</small><strong>{workspace.name}</strong><p>{workspace.organizationName}</p><dl><div><dt>Environment</dt><dd>{humanise(workspace.environment)}</dd></div><div><dt>Objective</dt><dd>{workspace.objective ?? 'Growth optimization'}</dd></div><div><dt>Data</dt><dd>{isDemoData ? 'Demo seed' : 'Ingested'}</dd></div></dl><button type="button" onClick={() => { setTopbarMenu(null); notify(data.dataSourceNote); }}><CircleCheckBig /> {systemStatus.message}</button></div>}
+          {topbarMenu === 'workspace' && <div className="topbar-popover workspace-popover"><small>{data.workspaceContext ? `${humanise(data.workspaceContext.role)} · ${data.workspaceContext.name}` : 'ACTIVE WORKSPACE'}</small><strong>{workspace.name}</strong><p>{workspace.objective ?? workspace.organizationName}</p><div className="workspace-options" role="list" aria-label="Available workspaces">{availableWorkspaces.map((option) => <button key={option.id} type="button" className={option.id === workspace.id ? 'active' : ''} disabled={workspaceSwitching} onClick={() => changeWorkspace(option.id)}><Building2 /><span><b>{option.name}</b><em>{humanise(option.environment)}</em></span>{option.id === workspace.id ? <CircleCheckBig /> : <ArrowRight />}</button>)}</div><button type="button" onClick={() => { setTopbarMenu(null); notify(data.dataSourceNote); }}><CircleCheckBig /> {systemStatus.message}</button></div>}
           {topbarMenu === 'notifications' && <div className="topbar-popover notifications-popover"><small>3 SYSTEM UPDATES</small><button type="button" onClick={() => { setTopbarMenu(null); notify(data.dataSourceNote); }}><CircleCheckBig /><span><b>{systemStatus.label}</b><em>{systemStatus.message}</em></span></button><button type="button" onClick={() => activateSection('Intelligence')}><CircleAlert /><span><b>{bottleneck.stage}</b><em>{humanise(bottleneck.severity)} severity bottleneck</em></span></button><button type="button" onClick={() => activateSection('Simulations')}><Sparkles /><span><b>New recommendation</b><em>{recommendation.title}</em></span></button></div>}
-          {topbarMenu === 'profile' && <div className="topbar-popover profile-popover"><div className="profile-summary"><span>{data.operatorFirstName.charAt(0).toUpperCase()}</span><p><strong>{data.session?.displayName ?? data.operatorFirstName}</strong><small>{data.session?.email ?? 'AXIOM operator'}</small></p></div><button type="button" onClick={() => activateSection('Settings')}><Settings /> Workspace settings</button><button type="button" onClick={() => { setTopbarMenu(null); setCopilotOpen(true); }}><Sparkles /> Open AXIOM AI</button>{data.session?.authenticated && <button type="button" onClick={() => window.location.assign('/signout-with-chatgpt?return_to=/')}><LogOut /> Sign out</button>}<em>{workspace.name} · {humanise(workspace.environment)} · {data.storage ? `saved r${data.storage.revision}` : 'connected'}</em></div>}
+          {topbarMenu === 'profile' && <div className="topbar-popover profile-popover"><div className="profile-summary"><span>{data.operatorFirstName.charAt(0).toUpperCase()}</span><p><strong>{data.session?.displayName ?? data.operatorFirstName}</strong><small>{data.session?.email ?? 'AXIOM operator'}</small></p></div><button type="button" onClick={() => activateSection('Settings')}><Settings /> Workspace settings</button><button type="button" onClick={() => { setTopbarMenu(null); setCopilotOpen(true); }}><Sparkles /> Open AXIOM AI</button>{data.session?.authenticated && <a href="/signout-with-chatgpt?return_to=/"><LogOut /> Sign out</a>}<em>{workspace.name} · {humanise(workspace.environment)} · {data.storage ? `saved r${data.storage.revision}` : 'connected'}</em></div>}
         </header>
 
         {activeNav === 'Overview' ? <div id="dashboard-overview" tabIndex={-1} className={`dashboard${spotlight === 'dashboard-overview' ? ' spotlight' : ''}`}>
@@ -578,7 +618,7 @@ export default function Home() {
                 PROJECT_CONTEXT ka rule: "No fabricated metrics." Isliye source
                 label UI mein visible hai, sirf tooltip mein nahi.
               */}
-              <p>AXIOM is monitoring your <b>growth system</b>{isDemoData && <> · <b>demo seed data</b></>}</p>
+              <p>AXIOM is monitoring your <b>growth system</b>{isDemoData ? <> · <b>demo seed data</b></> : <> · <b>measured workspace data</b></>}</p>
             </div>
             <button className="live-status" type="button" title={data.dataSourceNote} onClick={() => notify(data.dataSourceNote)}>
               <i /> <b>{systemStatus.label}</b><span>{systemStatus.message}</span><ChevronDown />
@@ -634,7 +674,7 @@ export default function Home() {
               <button className="panel-link" type="button" onClick={() => activateSection('Decisions')}>View all decisions <ArrowRight /></button>
             </article>
           </section>
-        </div> : <SectionPages activeNav={activeNav} data={data} onOpenCopilot={(message) => { setCopilotReply(message); setCopilotOpen(true); }} onReview={() => setReviewOpen(true)} onExperiment={setSelectedExperiment} onDecision={setSelectedDecision} onNotify={notify} />}
+        </div> : <SectionPages activeNav={activeNav} data={data} theme={theme} onThemeChange={selectTheme} onOpenCopilot={(message) => { setCopilotReply(message); setCopilotOpen(true); }} onReview={() => setReviewOpen(true)} onExperiment={setSelectedExperiment} onDecision={setSelectedDecision} onNotify={notify} />}
       </section>
 
       {reviewOpen && (
@@ -659,7 +699,7 @@ export default function Home() {
         />
       )}
 
-      {selectedExperiment && <ExperimentDetailModal experiment={selectedExperiment} onClose={() => setSelectedExperiment(null)} onAnalyze={() => { setCopilotReply(`${selectedExperiment.name} is ${selectedExperiment.progressPct}% complete with ${signedPct(selectedExperiment.observedLiftPct)} observed lift. ${selectedExperiment.isConclusive ? 'The result is conclusive.' : 'More evidence is required before a decision.'}`); setSelectedExperiment(null); setCopilotOpen(true); }} />}
+      {selectedExperiment && <ExperimentDetailModal experiment={selectedExperiment} saving={experimentActionSaving} onClose={() => setSelectedExperiment(null)} onControl={async (action) => { if (experimentActionSaving) return; setExperimentActionSaving(true); try { const result = await controlExperiment(workspace.id, selectedExperiment.id, action); const updated = await loadOverview(undefined, workspace.id); setData(updated); setSelectedExperiment(updated.experiments.find((experiment) => experiment.id === selectedExperiment.id) ?? null); notify(`Experiment ${humanise(result.status)}; delivery ${result.flagEnabled ? 'enabled' : 'disabled'}`); } catch (cause) { notify(cause instanceof Error ? cause.message : 'Experiment control failed'); } finally { setExperimentActionSaving(false); } }} onAnalyze={() => { setCopilotReply(`${selectedExperiment.name} is ${selectedExperiment.progressPct}% complete with ${signedPct(selectedExperiment.observedLiftPct)} observed lift. ${selectedExperiment.isConclusive ? 'The result is conclusive.' : 'More evidence is required before a decision.'}`); setSelectedExperiment(null); setCopilotOpen(true); }} />}
 
       {selectedDecision && <DecisionDetailModal decision={selectedDecision} onClose={() => setSelectedDecision(null)} onAnalyze={() => { setCopilotReply(`${selectedDecision.title}: ${selectedDecision.summary} Measured impact was ${signedPct(selectedDecision.impactPct)}.`); setSelectedDecision(null); setCopilotOpen(true); }} />}
 

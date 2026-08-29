@@ -151,6 +151,29 @@ export interface Recommendation {
   status: ExperimentStatus;
 }
 
+export interface OpportunityCandidate {
+  id: string;
+  rank: number;
+  title: string;
+  description: string;
+  focusMetric: string;
+  predictedUpliftPct: number;
+  confidencePct: number;
+  riskLevel: RiskLevel;
+  effort: 'small' | 'medium' | 'large';
+  reversibility: 'instant' | 'fast' | 'slow';
+  score: number;
+  scoreBreakdown: {
+    expectedValue: number;
+    evidenceStrength: number;
+    safety: number;
+    deliveryCost: number;
+  };
+  evidence: string[];
+  assumptions: string[];
+  selected: boolean;
+}
+
 // --- Active experiments ---
 
 export interface ActiveExperiment {
@@ -164,6 +187,14 @@ export interface ActiveExperiment {
   guardrailBreached: boolean;
   /** Sequential testing ke bina "significant" claim nahi karte. */
   isConclusive: boolean;
+  analysis?: {
+    controlSubjects: number;
+    treatmentSubjects: number;
+    probabilityTreatmentBetterPct: number;
+    confidenceIntervalPct: [number, number];
+    decision: 'insufficient_data' | 'continue' | 'winner' | 'loser' | 'guardrail_rollback';
+    rationale: string;
+  };
 }
 
 // --- Decision receipts ---
@@ -192,6 +223,8 @@ export interface DashboardResponse {
   growth: GrowthSeries;
   bottleneck: Bottleneck;
   recommendation: Recommendation;
+  /** Day 12–15 deterministic, evidence-backed ranked intervention portfolio. */
+  opportunities?: OpportunityCandidate[];
   experiments: ActiveExperiment[];
   decisions: DecisionReceiptSummary[];
   /** Signed-in Sites identity. Supplied only by the hosted same-origin API. */
@@ -200,6 +233,57 @@ export interface DashboardResponse {
     email: string;
     displayName: string;
     authenticated: boolean;
+    authMode: 'chatgpt' | 'local_development';
+  };
+  /** Server-authorized organization membership and switchable workspaces. */
+  workspaceContext?: {
+    id: string;
+    name: string;
+    slug: string;
+    role: 'owner' | 'admin' | 'analyst' | 'viewer';
+    availableWorkspaces: WorkspaceSummary[];
+  };
+  /** Honest, workspace-scoped event ingestion telemetry. */
+  ingestion?: {
+    totalEvents: number;
+    uniqueUsers: number;
+    lastEventAt: string | null;
+    sources: Array<{
+      source: string;
+      status: 'connected' | 'idle';
+      eventCount: number;
+      lastEventAt: string | null;
+    }>;
+  };
+  /** Day 6–10 governed measurement pipeline status and cohort evidence. */
+  measurement?: {
+    state: 'collecting' | 'measured';
+    windowDays: number;
+    observedUsers: number;
+    recognizedEvents: number;
+    requiredUsers: number;
+    coveragePct: number;
+    computedAt: string;
+    retention: {
+      day7Pct: number | null;
+      day7EligibleUsers: number;
+      day30Pct: number | null;
+      day30EligibleUsers: number;
+    };
+    quality: {
+      hasSignupSignal: boolean;
+      hasActivationSignal: boolean;
+      hasRevenueSignal: boolean;
+      isSampled: boolean;
+    };
+  };
+  riskPolicy?: {
+    maxTrafficPct: number;
+    minObservedUsers: number;
+    minSubjectsPerVariant: number;
+    confidenceThresholdPct: number;
+    maxGuardrailIncreasePct: number;
+    autoRollback: boolean;
   };
   /** Persistent snapshot state, useful for honest UI status and write feedback. */
   storage?: {

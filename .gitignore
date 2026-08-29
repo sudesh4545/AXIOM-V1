@@ -33,6 +33,8 @@ htmlcov/
 *.sqlite
 *.sqlite3
 *.db-journal
+*.db-shm
+*.db-wal
 
 # ---------- Editors / OS ----------
 .vscode/

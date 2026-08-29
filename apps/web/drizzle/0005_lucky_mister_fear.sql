@@ -1,0 +1,1 @@
+CREATE INDEX `idx_outcomes_workspace_experiment_metric` ON `experiment_outcomes` (`workspace_id`,`experiment_id`,`metric_key`);

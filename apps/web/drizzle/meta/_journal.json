@@ -8,6 +8,48 @@
       "when": 1787868391783,
       "tag": "0000_high_pixie",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1787953108885,
+      "tag": "0001_clear_wiccan",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1787953492777,
+      "tag": "0002_clear_phil_sheldon",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1787975972835,
+      "tag": "0003_dark_imperial_guard",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1787977337168,
+      "tag": "0004_mushy_dagger",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1787977720939,
+      "tag": "0005_lucky_mister_fear",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1787993731696,
+      "tag": "0006_pretty_lyja",
+      "breakpoints": true
     }
   ]
 }

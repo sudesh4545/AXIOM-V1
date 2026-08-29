@@ -8,6 +8,7 @@
  */
 
 import type {
+  ActiveExperiment,
   ApiErrorDetail,
   DashboardResponse,
   WorkspaceSummary,
@@ -105,10 +106,13 @@ export function getDashboard(
  * workspace use karte hain — isse seed dobara chalane pe (nayi UUIDs) frontend
  * apne aap kaam karta rehta hai.
  */
-export async function loadOverview(operatorEmail?: string): Promise<DashboardResponse> {
+export async function loadOverview(operatorEmail?: string, workspaceId?: string): Promise<DashboardResponse> {
   // Day 3: hosted app apni same-origin Worker API + D1 use karti hai. Optional
   // external URL sirf legacy FastAPI development ke liye supported hai.
-  if (!CONFIGURED_API_BASE_URL) return request<DashboardResponse>('/api/v1/dashboard');
+  if (!CONFIGURED_API_BASE_URL) {
+    const query = workspaceId ? `?workspaceId=${encodeURIComponent(workspaceId)}` : '';
+    return request<DashboardResponse>(`/api/v1/dashboard${query}`);
+  }
 
   const workspaces = await listWorkspaces();
   if (workspaces.length === 0) {
@@ -119,10 +123,24 @@ export async function loadOverview(operatorEmail?: string): Promise<DashboardRes
   return getDashboard(workspaces[0].id, operatorEmail);
 }
 
+export function selectWorkspace(workspaceId: string): Promise<DashboardResponse> {
+  return request<DashboardResponse>('/api/v1/dashboard', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'select_workspace', workspaceId }),
+  });
+}
+
 export function approveRecommendation(recommendationId: string): Promise<DashboardResponse> {
   return request<DashboardResponse>('/api/v1/dashboard', {
     method: 'POST',
     body: JSON.stringify({ action: 'approve_recommendation', recommendationId }),
+  });
+}
+
+export function controlExperiment(workspaceId: string, experimentId: string, action: 'pause' | 'resume' | 'rollback'): Promise<{ experimentId: string; status: ActiveExperiment['status']; flagEnabled: boolean }> {
+  return request('/api/v1/experiments', {
+    method: 'POST',
+    body: JSON.stringify({ action, workspaceId, experimentId }),
   });
 }
 
