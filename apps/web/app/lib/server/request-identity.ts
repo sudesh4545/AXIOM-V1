@@ -6,7 +6,7 @@ export type RequestIdentity = {
   authMode: 'firebase' | 'hosted_session' | 'local_development';
 };
 
-const FIREBASE_WEB_API_KEY = 'AIzaSyAZ0nlh8-IBMtySXVWu9Vtc9n00QP3Yf8o';
+const FIREBASE_WEB_API_KEY = 'AIzaSyAZOnlh8-IBMtySXVWu9Vtc9nO0QP3Yf8o';
 
 function decodeFullName(request: Request): string | null {
   const encoding = request.headers.get('oai-authenticated-user-full-name-encoding');
