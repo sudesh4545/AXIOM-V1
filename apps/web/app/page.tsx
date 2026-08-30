@@ -485,8 +485,11 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const cached = readCachedOverview();
-    if (cached) setData(cached);
+    const frame = window.requestAnimationFrame(() => {
+      const cached = readCachedOverview();
+      if (cached) setData(cached);
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, []);
 
   useEffect(() => {
