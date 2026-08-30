@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
-import Image from 'next/image';
 import {
   Activity, ArrowLeft, ArrowRight, BarChart3, Beaker, Bell, BrainCircuit,
   Building2, ChevronDown, CircleAlert, CircleCheckBig, CircleX, FlaskConical,
@@ -140,7 +139,7 @@ function greeting(): string {
 function Brand() {
   return (
     <div className="brand" aria-label="AXIOM V1">
-      <span>A</span><b className="brand-x brand-x-v2" aria-hidden="true"><Image src="/brand/axiom-mark-v2-256.png" width={40} height={40} alt="" priority /></b><span>IOM</span><em><b>V</b><span>1</span></em>
+      <span>A</span><b className="brand-x brand-x-v2" aria-hidden="true"><img src="/brand/axiom-mark-v2-256.png" width="40" height="40" alt="" /></b><span>IOM</span><em><b>V</b><span>1</span></em>
     </div>
   );
 }
@@ -688,11 +687,11 @@ export default function Home() {
             <button type="button" className={theme === 'neon' ? 'active' : ''} aria-pressed={theme === 'neon'} onClick={() => selectTheme('neon')} title="Neon mode"><Sparkles /><span>Neon</span></button>
           </div>
           <button onClick={() => setTopbarMenu((current) => current === 'notifications' ? null : 'notifications')} className="notification" aria-label="Notifications" aria-expanded={topbarMenu === 'notifications'} type="button"><Bell /><b>3</b></button>
-          <button id="profile-button" className={`avatar${spotlight === 'profile-button' ? ' spotlight' : ''}`} type="button" aria-label="Profile" aria-expanded={topbarMenu === 'profile'} onClick={() => setTopbarMenu((current) => current === 'profile' ? null : 'profile')}><Image src="/brand/profile-axiom-founder-256.png" width={49} height={49} alt="" priority /></button>
+          <button id="profile-button" className={`avatar${spotlight === 'profile-button' ? ' spotlight' : ''}`} type="button" aria-label="Profile" aria-expanded={topbarMenu === 'profile'} onClick={() => setTopbarMenu((current) => current === 'profile' ? null : 'profile')}><img src="/brand/profile-axiom-core-256.png" width="49" height="49" alt="" /></button>
 
           {topbarMenu === 'workspace' && <div className="topbar-popover workspace-popover"><small>{data.workspaceContext ? `${humanise(data.workspaceContext.role)} · ${data.workspaceContext.name}` : 'ACTIVE WORKSPACE'}</small><strong>{workspace.name}</strong><p>{workspace.objective ?? workspace.organizationName}</p><div className="workspace-options" role="list" aria-label="Available workspaces">{availableWorkspaces.map((option) => <button key={option.id} type="button" className={option.id === workspace.id ? 'active' : ''} disabled={workspaceSwitching} onClick={() => changeWorkspace(option.id)}><Building2 /><span><b>{option.name}</b><em>{humanise(option.environment)}</em></span>{option.id === workspace.id ? <CircleCheckBig /> : <ArrowRight />}</button>)}</div><button type="button" onClick={() => { setTopbarMenu(null); notify(data.dataSourceNote); }}><CircleCheckBig /> {systemStatus.message}</button></div>}
           {topbarMenu === 'notifications' && <div className="topbar-popover notifications-popover"><small>3 SYSTEM UPDATES</small><button type="button" onClick={() => { setTopbarMenu(null); notify(data.dataSourceNote); }}><CircleCheckBig /><span><b>{systemStatus.label}</b><em>{systemStatus.message}</em></span></button><button type="button" onClick={() => activateSection('Intelligence')}><CircleAlert /><span><b>{bottleneck.stage}</b><em>{humanise(bottleneck.severity)} severity bottleneck</em></span></button><button type="button" onClick={() => activateSection('Simulations')}><Sparkles /><span><b>New recommendation</b><em>{recommendation.title}</em></span></button></div>}
-          {topbarMenu === 'profile' && <div className="topbar-popover profile-popover"><div className="profile-summary"><span><Image src="/brand/profile-axiom-founder-256.png" width={42} height={42} alt="" /></span><p><strong>{data.session?.displayName ?? data.operatorFirstName}</strong><small>{data.session?.email ?? 'AXIOM operator'}</small></p></div><button type="button" onClick={() => activateSection('Settings')}><Settings /> Workspace settings</button><button type="button" onClick={() => { setTopbarMenu(null); setCopilotOpen(true); }}><Sparkles /> Open AXIOM AI</button><button type="button" onClick={logout}><LogOut /> Log out</button><em>{workspace.name} · {humanise(workspace.environment)} · {data.storage ? `saved r${data.storage.revision}` : 'connected'}</em></div>}
+          {topbarMenu === 'profile' && <div className="topbar-popover profile-popover"><div className="profile-summary"><span><img src="/brand/profile-axiom-core-256.png" width="42" height="42" alt="" /></span><p><strong>{data.session?.displayName ?? data.operatorFirstName}</strong><small>{data.session?.email ?? 'AXIOM operator'}</small></p></div><button type="button" onClick={() => activateSection('Settings')}><Settings /> Workspace settings</button><button type="button" onClick={() => { setTopbarMenu(null); setCopilotOpen(true); }}><Sparkles /> Open AXIOM AI</button><button type="button" onClick={logout}><LogOut /> Log out</button><em>{workspace.name} · {humanise(workspace.environment)} · {data.storage ? `saved r${data.storage.revision}` : 'connected'}</em></div>}
         </header>
 
         {activeNav === 'Overview' ? <div id="dashboard-overview" tabIndex={-1} className={`dashboard${spotlight === 'dashboard-overview' ? ' spotlight' : ''}`}>
