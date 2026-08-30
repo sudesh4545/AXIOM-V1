@@ -61,6 +61,7 @@ function friendlyAuthError(cause: unknown): string {
     'auth/operation-not-allowed': 'This sign-in method is not enabled in Firebase Authentication.',
     'auth/unauthorized-domain': 'This website domain is not authorised in Firebase Authentication.',
     'auth/internal-error': 'Firebase could not complete the request. Please retry in a moment.',
+    'auth/argument-error': 'Firebase web configuration is invalid. Refresh the project SDK configuration.',
   };
   return messages[code] ?? 'Authentication could not be completed. Please try again.';
 }
@@ -88,6 +89,10 @@ export function AuthScreen({ theme, user, onThemeChange }: AuthScreenProps) {
   const needsVerification = isPasswordUser(user) && !user?.emailVerified;
 
   useEffect(() => () => { recaptchaRef.current?.clear(); recaptchaRef.current = null; }, []);
+  useEffect(() => {
+    const page = document.querySelector<HTMLElement>('.auth-page');
+    if (page) page.scrollTop = 0;
+  }, [mode]);
 
   const passwordChecks = useMemo(() => [
     { label: '8+ characters', passed: password.length >= 8 },
@@ -179,10 +184,10 @@ export function AuthScreen({ theme, user, onThemeChange }: AuthScreenProps) {
     <div className="auth-grid" aria-hidden="true" /><div className="auth-orb auth-orb-one" /><div className="auth-orb auth-orb-two" />
     <header className="auth-topbar"><div className="auth-brand"><i><Image src="/brand/axiom-mark-v2-256.png" width={36} height={36} alt="" priority /></i><strong>A<span>X</span>IOM</strong><em>V1</em></div><div className="auth-theme" role="group" aria-label="Login appearance"><button className={theme === 'light' ? 'active' : ''} onClick={() => onThemeChange('light')} title="Light theme"><Sun /></button><button className={theme === 'dark' ? 'active' : ''} onClick={() => onThemeChange('dark')} title="Dark theme"><Moon /></button><button className={theme === 'neon' ? 'active' : ''} onClick={() => onThemeChange('neon')} title="Neon theme"><Sparkles /></button></div></header>
     <section className="auth-experience">
-      <aside className="auth-story"><span className="auth-kicker"><Zap /> GOVERNED GROWTH INTELLIGENCE</span><h1>Enter the operating system for <em>decisive growth.</em></h1><p>One secure identity unlocks experiments, causal evidence, recommendations and decision memory.</p><div className="auth-signal"><i><ShieldCheck /></i><span><b>Enterprise-grade identity</b><small>Verified providers · protected workspace · auditable access</small></span></div><div className="auth-proof"><span><b>99.99%</b><small>Identity uptime</small></span><span><b>&lt;1.2s</b><small>Secure entry</small></span><span><b>24/7</b><small>Risk monitoring</small></span></div></aside>
+      <aside className="auth-story"><span className="auth-kicker"><Zap /> GOVERNED GROWTH INTELLIGENCE</span><h1><span>Enter the operating</span><span>system for</span><em>decisive growth.</em></h1><p>One secure identity unlocks experiments, causal evidence, recommendations and decision memory.</p><div className="auth-signal"><i><ShieldCheck /></i><span><b>Enterprise-grade identity</b><small>Verified providers · protected workspace · auditable access</small></span></div><div className="auth-proof"><span><b>99.99%</b><small>Identity uptime</small></span><span><b>&lt;1.2s</b><small>Secure entry</small></span><span><b>24/7</b><small>Risk monitoring</small></span></div></aside>
       <article className="auth-card">
         {mode !== 'signin' && <button className="auth-back" type="button" onClick={() => { setMode('signin'); setConfirmation(null); resetFeedback(); }}><ArrowLeft /> Back to sign in</button>}
-        <div className="auth-heading"><span>{mode === 'signup' ? 'CREATE YOUR IDENTITY' : mode === 'forgot' ? 'ACCOUNT RECOVERY' : mode === 'phone' ? 'PHONE VERIFICATION' : 'SECURE ACCESS'}</span><h2>{mode === 'signup' ? 'Create your AXIOM account' : mode === 'forgot' ? 'Reset your password' : mode === 'phone' ? 'Continue with phone' : 'Welcome back'}</h2><p>{mode === 'signup' ? 'Build a verified workspace identity.' : mode === 'forgot' ? 'We’ll email you a secure recovery link.' : mode === 'phone' ? 'Use a real SMS one-time code.' : 'Authenticate to enter your growth command center.'}</p><i className="auth-heading-flow" aria-hidden="true" /></div>
+        <div className="auth-heading"><span><Sparkles />{mode === 'signup' ? 'CREATE YOUR IDENTITY' : mode === 'forgot' ? 'ACCOUNT RECOVERY' : mode === 'phone' ? 'PHONE VERIFICATION' : 'SECURE ACCESS'}</span><h2>{mode === 'signup' ? 'Create your AXIOM account' : mode === 'forgot' ? 'Reset your password' : mode === 'phone' ? 'Continue with phone' : 'Welcome back'}</h2><p>{mode === 'signup' ? 'Build a verified workspace identity.' : mode === 'forgot' ? 'We’ll email you a secure recovery link.' : mode === 'phone' ? 'Use a real SMS one-time code.' : 'Authenticate to enter your growth command center.'}</p><i className="auth-heading-flow" aria-hidden="true" /></div>
 
         {mode === 'signin' && <><div className="oauth-grid"><button type="button" disabled={Boolean(loading)} onClick={() => oauthSignIn(new GoogleAuthProvider(), 'google')}><GoogleIcon />{loading === 'google' ? 'Connecting…' : 'Continue with Google'}</button><button type="button" disabled={Boolean(loading)} onClick={() => oauthSignIn(new GithubAuthProvider(), 'github')}><GithubIcon className="github-mark" aria-hidden="true" />{loading === 'github' ? 'Connecting…' : 'Continue with GitHub'}</button></div><button className="phone-entry" type="button" onClick={() => { setMode('phone'); resetFeedback(); }}><Phone /> <span>Continue with phone number</span> <ArrowRight /></button><div className="auth-divider"><span>or use verified email</span></div></>}
 
