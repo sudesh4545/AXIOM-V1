@@ -13,6 +13,7 @@ import type {
   DashboardResponse,
   WorkspaceSummary,
 } from './axiom-contract';
+import { firebaseAuthorizationHeader } from './firebase-client';
 
 /**
  * Base URL environment se aati hai, hardcode nahi.
@@ -50,12 +51,13 @@ export class AxiomNetworkError extends Error {
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const url = `${API_BASE_URL}${path}`;
+  const authHeaders = await firebaseAuthorizationHeader();
 
   let response: Response;
   try {
     response = await fetch(url, {
       ...init,
-      headers: { 'Content-Type': 'application/json', ...init?.headers },
+      headers: { 'Content-Type': 'application/json', ...authHeaders, ...init?.headers },
       // Dashboard data hamesha fresh chahiye — stale cache pe "kal ke numbers"
       // dikhana analytics product mein bug hai, optimisation nahi.
       cache: 'no-store',

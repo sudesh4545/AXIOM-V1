@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 function json(body: unknown, status=200) { return secureJson(body,status); }
 function clean(value:unknown, field:string, max=120) { if(typeof value!=='string'||!value.trim()||value.trim().length>max) throw new Error(`${field} is required and must be at most ${max} characters.`); return value.trim(); }
 async function authorize(request:Request, workspaceId:string):Promise<RequestIdentity|Response>{
-  const identity=requestIdentity(request); if(!identity)return json({code:'authentication_required',message:'Sign in to connect an adapter.',details:null},401);
+  const identity=await requestIdentity(request); if(!identity)return json({code:'authentication_required',message:'Sign in to connect an adapter.',details:null},401);
   await ensureDatabase(); const now=new Date().toISOString(); await getDatabase().prepare(`INSERT INTO axiom_users (id,email,display_name,created_at,updated_at) VALUES (?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET email=excluded.email,display_name=excluded.display_name,updated_at=excluded.updated_at`).bind(identity.userId,identity.email,identity.displayName,now,now).run();
   const access=await resolveWorkspaceAccess(identity,workspaceId); if(access.active.id!==workspaceId)return json({code:'workspace_forbidden',message:'That workspace is not available to this account.',details:null},403); return identity;
 }

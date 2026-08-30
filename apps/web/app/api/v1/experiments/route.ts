@@ -24,7 +24,7 @@ function clean(value: unknown, field: string, max = 120): string {
 }
 
 async function authorize(request: Request, workspaceId: string): Promise<{ identity: RequestIdentity; role: 'owner' | 'admin' | 'analyst' | 'viewer' } | Response> {
-  const identity = requestIdentity(request);
+  const identity = await requestIdentity(request);
   if (!identity) return json({ code: 'authentication_required', message: 'Sign in to use experiment delivery.', details: null }, 401);
   await ensureDatabase();
   const now = new Date().toISOString();

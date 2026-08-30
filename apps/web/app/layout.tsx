@@ -4,6 +4,11 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'AXIOM — Verified Experimentation OS',
   description: 'Turn business objectives into safe, measurable and verified experiments.',
+  icons: {
+    icon: [{ url: '/brand/axiom-mark-v2.png', type: 'image/png', sizes: '1024x1024' }],
+    shortcut: ['/brand/axiom-mark-v2.png'],
+    apple: [{ url: '/brand/axiom-mark-v2.png', type: 'image/png', sizes: '1024x1024' }],
+  },
   openGraph: {
     title: 'AXIOM — Verified Experimentation OS',
     description: 'From business objectives to verified experiments.',

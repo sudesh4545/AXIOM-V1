@@ -5,7 +5,7 @@ import { runShadowSimulation, type SimulationInput, type SimulationScenario } fr
 import { resolveWorkspaceAccess } from '../../../lib/server/workspace-access';
 
 async function authorize(request: Request, workspaceId: string) {
-  const identity = requestIdentity(request);
+  const identity = await requestIdentity(request);
   if (!identity) return secureJson({ code: 'authentication_required', message: 'Sign in to run simulations.', details: null }, 401);
   await ensureDatabase();
   const access = await resolveWorkspaceAccess(identity, workspaceId);

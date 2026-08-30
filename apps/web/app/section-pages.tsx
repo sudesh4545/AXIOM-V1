@@ -10,6 +10,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { ActiveExperiment, DashboardResponse, DecisionReceiptSummary } from './lib/axiom-contract';
+import { firebaseAuthorizationHeader } from './lib/firebase-client';
 
 type SectionPagesProps = {
   activeNav: string; data: DashboardResponse;
@@ -105,7 +106,7 @@ function SimulationsPage({ data, onReview }: Pick<SectionPagesProps, 'data' | 'o
     setRunning(true); setSimulationError('');
     try {
       const first = data.bottleneck.steps[0]?.userCount ?? 1000; const activated = data.bottleneck.steps.find((step) => step.label.toLowerCase().includes('activated'));
-      const response = await fetch('/api/v1/simulations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+      const response = await fetch('/api/v1/simulations', { method: 'POST', headers: { 'Content-Type': 'application/json', ...await firebaseAuthorizationHeader() }, body: JSON.stringify({
         workspaceId: data.workspace.id, recommendationId: recommendation.id, baseConversionPct: activated?.conversionPct ?? 12.9,
         predictedUpliftPct: recommendation.predictedUpliftPct, trafficPct: recommendation.trafficPct, durationDays: recommendation.durationDays,
         dailyEligibleUsers: Math.max(1, Math.round(first / Math.max(data.bottleneck.evidenceWindowDays, 1))), baselineGuardrailPct: data.metrics.find((metric) => metric.key === 'churn_rate')?.rawValue ?? 3.2,

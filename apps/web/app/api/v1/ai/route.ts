@@ -67,7 +67,7 @@ export async function POST(request: Request) {
     const context = body.context && typeof body.context === 'object' ? body.context as AiContext : {};
     const workspaceId = context.workspace?.id;
     if (!workspaceId) return json({ message: 'A workspace is required.' }, 400);
-    const identity = requestIdentity(request);
+    const identity = await requestIdentity(request);
     if (!identity) return json({ message: 'Sign in to use AXIOM AI.' }, 401);
     await ensureDatabase();
     const access = await resolveWorkspaceAccess(identity, workspaceId);

@@ -71,7 +71,7 @@ async function authorize(request: Request, workspaceId: string): Promise<
   | { ok: true; identity: RequestIdentity; access: WorkspaceAccess }
   | { ok: false; response: Response }
 > {
-  const identity = requestIdentity(request);
+  const identity = await requestIdentity(request);
   if (!identity) return { ok: false, response: json({ code: 'authentication_required', message: 'Sign in to ingest AXIOM events.', details: null }, 401) };
   await ensureDatabase();
   await upsertUser(identity, new Date().toISOString());

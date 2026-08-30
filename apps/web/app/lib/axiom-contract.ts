@@ -233,7 +233,7 @@ export interface DashboardResponse {
     email: string;
     displayName: string;
     authenticated: boolean;
-    authMode: 'hosted_session' | 'local_development' | 'public_demo';
+    authMode: 'firebase' | 'hosted_session' | 'local_development';
   };
   /** Server-authorized organization membership and switchable workspaces. */
   workspaceContext?: {

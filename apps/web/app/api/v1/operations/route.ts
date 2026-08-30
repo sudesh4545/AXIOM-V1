@@ -10,7 +10,7 @@ export async function GET(request: Request): Promise<Response> {
   try {
     const workspaceId = new URL(request.url).searchParams.get('workspaceId') ?? '';
     if (!workspaceId) return secureJson({ code: 'workspace_required', message: 'workspaceId is required.', details: null }, 400);
-    const identity = requestIdentity(request); if (!identity) return secureJson({ code: 'authentication_required', message: 'Sign in to inspect operations.', details: null }, 401);
+    const identity = await requestIdentity(request); if (!identity) return secureJson({ code: 'authentication_required', message: 'Sign in to inspect operations.', details: null }, 401);
     await ensureDatabase(); const access = await resolveWorkspaceAccess(identity, workspaceId);
     if (access.active.id !== workspaceId) return secureJson({ code: 'workspace_forbidden', message: 'That workspace is not available.', details: null }, 403);
     const limited = await enforceRateLimit(request, 'operations:read', 120, 60); if (limited) return limited;

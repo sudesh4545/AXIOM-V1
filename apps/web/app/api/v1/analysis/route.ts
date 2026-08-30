@@ -1,8 +1,36 @@
 import { ensureDatabase, getDatabase } from '../../../../db';
 import { recomputeExperiment } from '../../../lib/server/experiment-runtime';
+import { secureJson } from '../../../lib/server/http-security';
 import { requestIdentity } from '../../../lib/server/request-identity';
 import { resolveWorkspaceAccess } from '../../../lib/server/workspace-access';
-import { secureJson } from '../../../lib/server/http-security';
-export const dynamic='force-dynamic';
-function json(body:unknown,status=200){return secureJson(body,status)}
-export async function GET(request:Request){try{const url=new URL(request.url);const workspaceId=url.searchParams.get('workspaceId');const experimentId=url.searchParams.get('experimentId');if(!workspaceId||!experimentId)return json({code:'parameters_required',message:'workspaceId and experimentId are required.',details:null},400);const identity=requestIdentity(request);if(!identity)return json({code:'authentication_required',message:'Sign in to inspect causal analysis.',details:null},401);await ensureDatabase();const access=await resolveWorkspaceAccess(identity,workspaceId);if(access.active.id!==workspaceId)return json({code:'workspace_forbidden',message:'That workspace is not available.',details:null},403);const exists=await getDatabase().prepare('SELECT id FROM experiment_definitions WHERE workspace_id=? AND id=?').bind(workspaceId,experimentId).first();if(!exists)return json({code:'experiment_not_found',message:'Experiment not found.',details:null},404);const runtime=await recomputeExperiment(workspaceId,experimentId);const receipt=await getDatabase().prepare('SELECT payload_json FROM decision_receipts WHERE workspace_id=? AND experiment_id=? ORDER BY created_at DESC LIMIT 1').bind(workspaceId,experimentId).first<{payload_json:string}>();return json({...runtime,method:'randomized two-proportion monitoring with a normal-approximation interval',limitations:['Sequential reads can inflate false positives; AXIOM uses a minimum sample and conservative probability threshold.','Causal claims require persisted random assignment, exposure and sufficient outcomes.'],receipt:receipt?JSON.parse(receipt.payload_json):null});}catch(error){console.error('analysis failed',error);return json({code:'analysis_failed',message:'AXIOM could not compute this analysis.',details:null},500)}}
+
+export const dynamic = 'force-dynamic';
+
+function json(body: unknown, status = 200) { return secureJson(body, status); }
+
+export async function GET(request: Request) {
+  try {
+    const url = new URL(request.url);
+    const workspaceId = url.searchParams.get('workspaceId');
+    const experimentId = url.searchParams.get('experimentId');
+    if (!workspaceId || !experimentId) return json({ code: 'parameters_required', message: 'workspaceId and experimentId are required.', details: null }, 400);
+    const identity = await requestIdentity(request);
+    if (!identity) return json({ code: 'authentication_required', message: 'Sign in to inspect causal analysis.', details: null }, 401);
+    await ensureDatabase();
+    const access = await resolveWorkspaceAccess(identity, workspaceId);
+    if (access.active.id !== workspaceId) return json({ code: 'workspace_forbidden', message: 'That workspace is not available.', details: null }, 403);
+    const exists = await getDatabase().prepare('SELECT id FROM experiment_definitions WHERE workspace_id=? AND id=?').bind(workspaceId, experimentId).first();
+    if (!exists) return json({ code: 'experiment_not_found', message: 'Experiment not found.', details: null }, 404);
+    const runtime = await recomputeExperiment(workspaceId, experimentId);
+    const receipt = await getDatabase().prepare('SELECT payload_json FROM decision_receipts WHERE workspace_id=? AND experiment_id=? ORDER BY created_at DESC LIMIT 1').bind(workspaceId, experimentId).first<{ payload_json: string }>();
+    return json({
+      ...runtime,
+      method: 'randomized two-proportion monitoring with a normal-approximation interval',
+      limitations: ['Sequential reads can inflate false positives; AXIOM uses a minimum sample and conservative probability threshold.', 'Causal claims require persisted random assignment, exposure and sufficient outcomes.'],
+      receipt: receipt ? JSON.parse(receipt.payload_json) : null,
+    });
+  } catch (error) {
+    console.error('analysis failed', error);
+    return json({ code: 'analysis_failed', message: 'AXIOM could not compute this analysis.', details: null }, 500);
+  }
+}

@@ -3,8 +3,10 @@ export type RequestIdentity = {
   email: string;
   displayName: string;
   authenticated: boolean;
-  authMode: 'hosted_session' | 'local_development' | 'public_demo';
+  authMode: 'firebase' | 'hosted_session' | 'local_development';
 };
+
+const FIREBASE_WEB_API_KEY = 'AIzaSyAZ0nlh8-IBMtySXVWu9Vtc9n00QP3Yf8o';
 
 function decodeFullName(request: Request): string | null {
   const encoding = request.headers.get('oai-authenticated-user-full-name-encoding');
@@ -18,10 +20,53 @@ function decodeFullName(request: Request): string | null {
  * The local fallback is deliberately restricted to loopback hosts so it can
  * never become an authentication bypass on a deployed hostname.
  */
-export function requestIdentity(request: Request): RequestIdentity | null {
+type FirebaseAccount = {
+  localId?: string;
+  email?: string;
+  emailVerified?: boolean;
+  displayName?: string;
+  phoneNumber?: string;
+  providerUserInfo?: Array<{ providerId?: string; displayName?: string; email?: string; phoneNumber?: string }>;
+};
+
+async function firebaseIdentity(request: Request): Promise<RequestIdentity | null> {
+  const authorization = request.headers.get('authorization');
+  if (!authorization?.startsWith('Bearer ')) return null;
+  const idToken = authorization.slice(7).trim();
+  if (!idToken || idToken.length > 8_192) return null;
+  try {
+    const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${FIREBASE_WEB_API_KEY}`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ idToken }),
+    });
+    if (!response.ok) return null;
+    const payload = await response.json() as { users?: FirebaseAccount[] };
+    const account = payload.users?.[0];
+    if (!account?.localId) return null;
+    if (account.email && !account.emailVerified) return null;
+    const email = account.email?.toLowerCase() ?? account.providerUserInfo?.find((provider) => provider.email)?.email?.toLowerCase();
+    const phone = account.phoneNumber ?? account.providerUserInfo?.find((provider) => provider.phoneNumber)?.phoneNumber;
+    const displayName = account.displayName
+      ?? account.providerUserInfo?.find((provider) => provider.displayName)?.displayName
+      ?? email?.split('@')[0]
+      ?? phone
+      ?? 'AXIOM user';
+    return {
+      userId: `firebase:${account.localId}`,
+      email: email ?? `${account.localId}@phone-user.axiom`,
+      displayName,
+      authenticated: true,
+      authMode: 'firebase',
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function requestIdentity(request: Request): Promise<RequestIdentity | null> {
+  const hostname = new URL(request.url).hostname;
   const userId = request.headers.get('oai-authenticated-user-id');
   const email = request.headers.get('oai-authenticated-user-email');
-  if (userId && email) {
+  if (userId && email && hostname.endsWith('.chatgpt.site')) {
     return {
       userId,
       email: email.toLowerCase(),
@@ -31,16 +76,8 @@ export function requestIdentity(request: Request): RequestIdentity | null {
     };
   }
 
-  const hostname = new URL(request.url).hostname;
-  if (hostname === 'axiom-v1.sudeshmehar3.workers.dev') {
-    return {
-      userId: 'public-demo-user',
-      email: 'demo@axiom.dev',
-      displayName: 'Sudesh',
-      authenticated: false,
-      authMode: 'public_demo',
-    };
-  }
+  const verifiedFirebaseIdentity = await firebaseIdentity(request);
+  if (verifiedFirebaseIdentity) return verifiedFirebaseIdentity;
 
   if (['localhost', '127.0.0.1', '::1'].includes(hostname)) {
     return {

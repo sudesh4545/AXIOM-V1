@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
+import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
+import Image from 'next/image';
 import {
   Activity, ArrowLeft, ArrowRight, BarChart3, Beaker, Bell, BrainCircuit,
   Building2, ChevronDown, CircleAlert, CircleCheckBig, CircleX, FlaskConical,
@@ -11,6 +13,8 @@ import {
 } from 'lucide-react';
 
 import { approveRecommendation, AxiomApiError, AxiomNetworkError, controlExperiment, loadOverview, selectWorkspace } from './lib/axiom-api';
+import { AuthScreen } from './auth-screen';
+import { firebaseAuth, firebaseAuthorizationHeader } from './lib/firebase-client';
 import { SectionPages } from './section-pages';
 import type {
   ActiveExperiment,
@@ -57,12 +61,11 @@ const NAV_TARGET_IDS: Record<string, string> = {
 
 const DASHBOARD_CACHE_KEY = 'axiom-overview-cache-v1';
 const DASHBOARD_CACHE_MAX_AGE_MS = 15 * 60 * 1000;
-const DEMO_SESSION_ENDED_KEY = 'axiom-demo-session-ended';
 
-function readCachedOverview(): DashboardResponse | null {
+function readCachedOverview(userId: string): DashboardResponse | null {
   if (typeof window === 'undefined') return null;
   try {
-    const cached = JSON.parse(window.localStorage.getItem(DASHBOARD_CACHE_KEY) ?? 'null') as { savedAt?: number; payload?: DashboardResponse } | null;
+    const cached = JSON.parse(window.localStorage.getItem(`${DASHBOARD_CACHE_KEY}:${userId}`) ?? 'null') as { savedAt?: number; payload?: DashboardResponse } | null;
     if (!cached?.payload || !cached.savedAt || Date.now() - cached.savedAt > DASHBOARD_CACHE_MAX_AGE_MS) return null;
     return cached.payload;
   } catch {
@@ -70,9 +73,9 @@ function readCachedOverview(): DashboardResponse | null {
   }
 }
 
-function cacheOverview(payload: DashboardResponse): void {
+function cacheOverview(payload: DashboardResponse, userId: string): void {
   try {
-    window.localStorage.setItem(DASHBOARD_CACHE_KEY, JSON.stringify({ savedAt: Date.now(), payload }));
+    window.localStorage.setItem(`${DASHBOARD_CACHE_KEY}:${userId}`, JSON.stringify({ savedAt: Date.now(), payload }));
   } catch {
     // Storage can be disabled or full; the live dashboard still works normally.
   }
@@ -137,7 +140,7 @@ function greeting(): string {
 function Brand() {
   return (
     <div className="brand" aria-label="AXIOM V1">
-      <span>A</span><b className="brand-x" aria-hidden="true"><i /><i /></b><span>IOM</span><em><b>V</b><span>1</span></em>
+      <span>A</span><b className="brand-x brand-x-v2" aria-hidden="true"><Image src="/brand/axiom-mark-v2-256.png" width={40} height={40} alt="" priority /></b><span>IOM</span><em><b>V</b><span>1</span></em>
     </div>
   );
 }
@@ -419,21 +422,6 @@ function StatusShell({ title, message, hint }: { title: string; message: string;
   );
 }
 
-function SignedOutShell({ theme, onResume }: { theme: AxiomTheme; onResume: () => void }) {
-  return (
-    <main className={`signed-out-page theme-${theme}`} data-theme={theme}>
-      <section className="signed-out-card" aria-labelledby="signed-out-title">
-        <Brand />
-        <span><ShieldCheck /> SESSION ENDED</span>
-        <h1 id="signed-out-title">You’re logged out</h1>
-        <p>Your dashboard cache and temporary workspace session have been cleared from this browser.</p>
-        <button type="button" onClick={onResume}>Continue to AXIOM <ArrowRight /></button>
-        <small>Demo access · no account credentials are stored on this device</small>
-      </section>
-    </main>
-  );
-}
-
 export default function Home() {
   const [activeNav, setActiveNav] = useState('Overview');
   const [theme, setTheme] = useState<AxiomTheme>('neon');
@@ -455,8 +443,17 @@ export default function Home() {
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
-  const [demoSessionEnded, setDemoSessionEnded] = useState(false);
+  const [authUser, setAuthUser] = useState<User | null>(null);
+  const [authReady, setAuthReady] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+
+  const authEligible = Boolean(authUser && (!authUser.providerData.some((provider) => provider.providerId === 'password') || authUser.emailVerified));
+
+  useEffect(() => onAuthStateChanged(firebaseAuth, (nextUser) => {
+    setAuthUser(nextUser);
+    setAuthReady(true);
+    if (!nextUser) setData(null);
+  }), []);
 
   useEffect(() => {
     const dismissFloatingPanels = (event: PointerEvent) => {
@@ -490,7 +487,6 @@ export default function Home() {
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
-      setDemoSessionEnded(window.localStorage.getItem(DEMO_SESSION_ENDED_KEY) === 'true');
       setSidebarCollapsed(window.localStorage.getItem('axiom-sidebar-collapsed') === 'true');
       const savedTheme = window.localStorage.getItem('axiom-theme');
       const initialTheme: AxiomTheme = savedTheme === 'dark' || savedTheme === 'light' || savedTheme === 'neon'
@@ -503,21 +499,23 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    if (!authUser || !authEligible) return;
     const frame = window.requestAnimationFrame(() => {
-      const cached = readCachedOverview();
+      const cached = readCachedOverview(authUser.uid);
       if (cached) setData(cached);
     });
     return () => window.cancelAnimationFrame(frame);
-  }, []);
+  }, [authEligible, authUser]);
 
   useEffect(() => {
+    if (!authUser || !authEligible) return;
     // `cancelled` flag isliye: component unmount hone ke baad `setState` call
     // karna React warning deta hai aur memory leak ka signal hai. React ke
     // StrictMode dev double-mount mein bhi yeh pehli fetch ko ignore kara deta.
     let cancelled = false;
 
     loadOverview()
-      .then((payload) => { if (!cancelled) { cacheOverview(payload); setData(payload); setError(null); } })
+      .then((payload) => { if (!cancelled) { cacheOverview(payload, authUser.uid); setData(payload); setError(null); } })
       .catch((cause: unknown) => {
         if (cancelled) return;
         if (cause instanceof AxiomNetworkError) {
@@ -533,7 +531,7 @@ export default function Home() {
       });
 
     return () => { cancelled = true; };
-  }, []);
+  }, [authEligible, authUser]);
 
   const notify = useCallback((message: string) => {
     setToast(message);
@@ -574,23 +572,16 @@ export default function Home() {
     notify(`${nextTheme.charAt(0).toUpperCase() + nextTheme.slice(1)} appearance selected`);
   };
 
-  const endDemoSession = () => {
-    window.localStorage.removeItem(DASHBOARD_CACHE_KEY);
+  const logout = async () => {
+    if (authUser) window.localStorage.removeItem(`${DASHBOARD_CACHE_KEY}:${authUser.uid}`);
     window.sessionStorage.clear();
-    window.localStorage.setItem(DEMO_SESSION_ENDED_KEY, 'true');
     setTopbarMenu(null);
     setData(null);
-    setDemoSessionEnded(true);
+    await signOut(firebaseAuth);
   };
 
-  const resumeDemoSession = () => {
-    window.localStorage.removeItem(DEMO_SESSION_ENDED_KEY);
-    window.location.reload();
-  };
-
-  if (demoSessionEnded) {
-    return <SignedOutShell theme={theme} onResume={resumeDemoSession} />;
-  }
+  if (!authReady) return <StatusShell title="Securing AXIOM…" message="Checking your verified identity" />;
+  if (!authUser || !authEligible) return <AuthScreen theme={theme} user={authUser} onThemeChange={selectTheme} />;
 
   if (error) {
     return <StatusShell title="Dashboard unavailable" message={error} hint={hint ?? undefined} />;
@@ -621,7 +612,7 @@ export default function Home() {
     try {
       const response = await fetch('/api/v1/ai', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...await firebaseAuthorizationHeader() },
         body: JSON.stringify({
           question: cleanQuestion,
           context: {
@@ -697,11 +688,11 @@ export default function Home() {
             <button type="button" className={theme === 'neon' ? 'active' : ''} aria-pressed={theme === 'neon'} onClick={() => selectTheme('neon')} title="Neon mode"><Sparkles /><span>Neon</span></button>
           </div>
           <button onClick={() => setTopbarMenu((current) => current === 'notifications' ? null : 'notifications')} className="notification" aria-label="Notifications" aria-expanded={topbarMenu === 'notifications'} type="button"><Bell /><b>3</b></button>
-          <button id="profile-button" className={`avatar${spotlight === 'profile-button' ? ' spotlight' : ''}`} type="button" aria-label="Profile" aria-expanded={topbarMenu === 'profile'} onClick={() => setTopbarMenu((current) => current === 'profile' ? null : 'profile')}>{data.operatorFirstName.charAt(0).toUpperCase()}</button>
+          <button id="profile-button" className={`avatar${spotlight === 'profile-button' ? ' spotlight' : ''}`} type="button" aria-label="Profile" aria-expanded={topbarMenu === 'profile'} onClick={() => setTopbarMenu((current) => current === 'profile' ? null : 'profile')}><Image src="/brand/profile-axiom-founder-256.png" width={49} height={49} alt="" priority /></button>
 
           {topbarMenu === 'workspace' && <div className="topbar-popover workspace-popover"><small>{data.workspaceContext ? `${humanise(data.workspaceContext.role)} · ${data.workspaceContext.name}` : 'ACTIVE WORKSPACE'}</small><strong>{workspace.name}</strong><p>{workspace.objective ?? workspace.organizationName}</p><div className="workspace-options" role="list" aria-label="Available workspaces">{availableWorkspaces.map((option) => <button key={option.id} type="button" className={option.id === workspace.id ? 'active' : ''} disabled={workspaceSwitching} onClick={() => changeWorkspace(option.id)}><Building2 /><span><b>{option.name}</b><em>{humanise(option.environment)}</em></span>{option.id === workspace.id ? <CircleCheckBig /> : <ArrowRight />}</button>)}</div><button type="button" onClick={() => { setTopbarMenu(null); notify(data.dataSourceNote); }}><CircleCheckBig /> {systemStatus.message}</button></div>}
           {topbarMenu === 'notifications' && <div className="topbar-popover notifications-popover"><small>3 SYSTEM UPDATES</small><button type="button" onClick={() => { setTopbarMenu(null); notify(data.dataSourceNote); }}><CircleCheckBig /><span><b>{systemStatus.label}</b><em>{systemStatus.message}</em></span></button><button type="button" onClick={() => activateSection('Intelligence')}><CircleAlert /><span><b>{bottleneck.stage}</b><em>{humanise(bottleneck.severity)} severity bottleneck</em></span></button><button type="button" onClick={() => activateSection('Simulations')}><Sparkles /><span><b>New recommendation</b><em>{recommendation.title}</em></span></button></div>}
-          {topbarMenu === 'profile' && <div className="topbar-popover profile-popover"><div className="profile-summary"><span>{data.operatorFirstName.charAt(0).toUpperCase()}</span><p><strong>{data.session?.displayName ?? data.operatorFirstName}</strong><small>{data.session?.email ?? 'AXIOM operator'}</small></p></div><button type="button" onClick={() => activateSection('Settings')}><Settings /> Workspace settings</button><button type="button" onClick={() => { setTopbarMenu(null); setCopilotOpen(true); }}><Sparkles /> Open AXIOM AI</button>{data.session?.authenticated ? <a href="/signout-with-chatgpt?return_to=/" target="_top"><LogOut /> Log out</a> : <button type="button" onClick={endDemoSession}><LogOut /> Log out</button>}<em>{workspace.name} · {humanise(workspace.environment)} · {data.storage ? `saved r${data.storage.revision}` : 'connected'}</em></div>}
+          {topbarMenu === 'profile' && <div className="topbar-popover profile-popover"><div className="profile-summary"><span><Image src="/brand/profile-axiom-founder-256.png" width={42} height={42} alt="" /></span><p><strong>{data.session?.displayName ?? data.operatorFirstName}</strong><small>{data.session?.email ?? 'AXIOM operator'}</small></p></div><button type="button" onClick={() => activateSection('Settings')}><Settings /> Workspace settings</button><button type="button" onClick={() => { setTopbarMenu(null); setCopilotOpen(true); }}><Sparkles /> Open AXIOM AI</button><button type="button" onClick={logout}><LogOut /> Log out</button><em>{workspace.name} · {humanise(workspace.environment)} · {data.storage ? `saved r${data.storage.revision}` : 'connected'}</em></div>}
         </header>
 
         {activeNav === 'Overview' ? <div id="dashboard-overview" tabIndex={-1} className={`dashboard${spotlight === 'dashboard-overview' ? ' spotlight' : ''}`}>
