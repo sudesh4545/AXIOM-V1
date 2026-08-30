@@ -57,6 +57,7 @@ const NAV_TARGET_IDS: Record<string, string> = {
 
 const DASHBOARD_CACHE_KEY = 'axiom-overview-cache-v1';
 const DASHBOARD_CACHE_MAX_AGE_MS = 15 * 60 * 1000;
+const DEMO_SESSION_ENDED_KEY = 'axiom-demo-session-ended';
 
 function readCachedOverview(): DashboardResponse | null {
   if (typeof window === 'undefined') return null;
@@ -418,6 +419,21 @@ function StatusShell({ title, message, hint }: { title: string; message: string;
   );
 }
 
+function SignedOutShell({ theme, onResume }: { theme: AxiomTheme; onResume: () => void }) {
+  return (
+    <main className={`signed-out-page theme-${theme}`} data-theme={theme}>
+      <section className="signed-out-card" aria-labelledby="signed-out-title">
+        <Brand />
+        <span><ShieldCheck /> SESSION ENDED</span>
+        <h1 id="signed-out-title">You’re logged out</h1>
+        <p>Your dashboard cache and temporary workspace session have been cleared from this browser.</p>
+        <button type="button" onClick={onResume}>Continue to AXIOM <ArrowRight /></button>
+        <small>Demo access · no account credentials are stored on this device</small>
+      </section>
+    </main>
+  );
+}
+
 export default function Home() {
   const [activeNav, setActiveNav] = useState('Overview');
   const [theme, setTheme] = useState<AxiomTheme>('neon');
@@ -439,6 +455,7 @@ export default function Home() {
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
+  const [demoSessionEnded, setDemoSessionEnded] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -473,6 +490,7 @@ export default function Home() {
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
+      setDemoSessionEnded(window.localStorage.getItem(DEMO_SESSION_ENDED_KEY) === 'true');
       setSidebarCollapsed(window.localStorage.getItem('axiom-sidebar-collapsed') === 'true');
       const savedTheme = window.localStorage.getItem('axiom-theme');
       const initialTheme: AxiomTheme = savedTheme === 'dark' || savedTheme === 'light' || savedTheme === 'neon'
@@ -555,6 +573,24 @@ export default function Home() {
     document.documentElement.dataset.theme = nextTheme;
     notify(`${nextTheme.charAt(0).toUpperCase() + nextTheme.slice(1)} appearance selected`);
   };
+
+  const endDemoSession = () => {
+    window.localStorage.removeItem(DASHBOARD_CACHE_KEY);
+    window.sessionStorage.clear();
+    window.localStorage.setItem(DEMO_SESSION_ENDED_KEY, 'true');
+    setTopbarMenu(null);
+    setData(null);
+    setDemoSessionEnded(true);
+  };
+
+  const resumeDemoSession = () => {
+    window.localStorage.removeItem(DEMO_SESSION_ENDED_KEY);
+    window.location.reload();
+  };
+
+  if (demoSessionEnded) {
+    return <SignedOutShell theme={theme} onResume={resumeDemoSession} />;
+  }
 
   if (error) {
     return <StatusShell title="Dashboard unavailable" message={error} hint={hint ?? undefined} />;
@@ -665,7 +701,7 @@ export default function Home() {
 
           {topbarMenu === 'workspace' && <div className="topbar-popover workspace-popover"><small>{data.workspaceContext ? `${humanise(data.workspaceContext.role)} · ${data.workspaceContext.name}` : 'ACTIVE WORKSPACE'}</small><strong>{workspace.name}</strong><p>{workspace.objective ?? workspace.organizationName}</p><div className="workspace-options" role="list" aria-label="Available workspaces">{availableWorkspaces.map((option) => <button key={option.id} type="button" className={option.id === workspace.id ? 'active' : ''} disabled={workspaceSwitching} onClick={() => changeWorkspace(option.id)}><Building2 /><span><b>{option.name}</b><em>{humanise(option.environment)}</em></span>{option.id === workspace.id ? <CircleCheckBig /> : <ArrowRight />}</button>)}</div><button type="button" onClick={() => { setTopbarMenu(null); notify(data.dataSourceNote); }}><CircleCheckBig /> {systemStatus.message}</button></div>}
           {topbarMenu === 'notifications' && <div className="topbar-popover notifications-popover"><small>3 SYSTEM UPDATES</small><button type="button" onClick={() => { setTopbarMenu(null); notify(data.dataSourceNote); }}><CircleCheckBig /><span><b>{systemStatus.label}</b><em>{systemStatus.message}</em></span></button><button type="button" onClick={() => activateSection('Intelligence')}><CircleAlert /><span><b>{bottleneck.stage}</b><em>{humanise(bottleneck.severity)} severity bottleneck</em></span></button><button type="button" onClick={() => activateSection('Simulations')}><Sparkles /><span><b>New recommendation</b><em>{recommendation.title}</em></span></button></div>}
-          {topbarMenu === 'profile' && <div className="topbar-popover profile-popover"><div className="profile-summary"><span>{data.operatorFirstName.charAt(0).toUpperCase()}</span><p><strong>{data.session?.displayName ?? data.operatorFirstName}</strong><small>{data.session?.email ?? 'AXIOM operator'}</small></p></div><button type="button" onClick={() => activateSection('Settings')}><Settings /> Workspace settings</button><button type="button" onClick={() => { setTopbarMenu(null); setCopilotOpen(true); }}><Sparkles /> Open AXIOM AI</button>{data.session?.authenticated && <button type="button" onClick={() => setTopbarMenu(null)}><LogOut /> Close menu</button>}<em>{workspace.name} · {humanise(workspace.environment)} · {data.storage ? `saved r${data.storage.revision}` : 'connected'}</em></div>}
+          {topbarMenu === 'profile' && <div className="topbar-popover profile-popover"><div className="profile-summary"><span>{data.operatorFirstName.charAt(0).toUpperCase()}</span><p><strong>{data.session?.displayName ?? data.operatorFirstName}</strong><small>{data.session?.email ?? 'AXIOM operator'}</small></p></div><button type="button" onClick={() => activateSection('Settings')}><Settings /> Workspace settings</button><button type="button" onClick={() => { setTopbarMenu(null); setCopilotOpen(true); }}><Sparkles /> Open AXIOM AI</button>{data.session?.authenticated ? <a href="/signout-with-chatgpt?return_to=/" target="_top"><LogOut /> Log out</a> : <button type="button" onClick={endDemoSession}><LogOut /> Log out</button>}<em>{workspace.name} · {humanise(workspace.environment)} · {data.storage ? `saved r${data.storage.revision}` : 'connected'}</em></div>}
         </header>
 
         {activeNav === 'Overview' ? <div id="dashboard-overview" tabIndex={-1} className={`dashboard${spotlight === 'dashboard-overview' ? ' spotlight' : ''}`}>
