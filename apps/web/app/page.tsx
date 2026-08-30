@@ -55,6 +55,28 @@ const NAV_TARGET_IDS: Record<string, string> = {
   Settings: 'section-settings',
 };
 
+const DASHBOARD_CACHE_KEY = 'axiom-overview-cache-v1';
+const DASHBOARD_CACHE_MAX_AGE_MS = 15 * 60 * 1000;
+
+function readCachedOverview(): DashboardResponse | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const cached = JSON.parse(window.localStorage.getItem(DASHBOARD_CACHE_KEY) ?? 'null') as { savedAt?: number; payload?: DashboardResponse } | null;
+    if (!cached?.payload || !cached.savedAt || Date.now() - cached.savedAt > DASHBOARD_CACHE_MAX_AGE_MS) return null;
+    return cached.payload;
+  } catch {
+    return null;
+  }
+}
+
+function cacheOverview(payload: DashboardResponse): void {
+  try {
+    window.localStorage.setItem(DASHBOARD_CACHE_KEY, JSON.stringify({ savedAt: Date.now(), payload }));
+  } catch {
+    // Storage can be disabled or full; the live dashboard still works normally.
+  }
+}
+
 const NAV_SLUGS: Record<string, string> = {
   Overview: 'overview', Intelligence: 'intelligence', Experiments: 'experiments',
   Analytics: 'analytics', Simulations: 'simulations', Decisions: 'decisions',
@@ -114,7 +136,7 @@ function greeting(): string {
 function Brand() {
   return (
     <div className="brand" aria-label="AXIOM V1">
-      <span>A</span><b className="brand-x" aria-hidden="true"><i /><i /></b><span>IOM</span><em>V1</em>
+      <span>A</span><b className="brand-x" aria-hidden="true"><i /><i /></b><span>IOM</span><em><b>V</b><span>1</span></em>
     </div>
   );
 }
@@ -407,6 +429,7 @@ export default function Home() {
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [copilotQuery, setCopilotQuery] = useState('');
   const [copilotReply, setCopilotReply] = useState('');
+  const [copilotLoading, setCopilotLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [spotlight, setSpotlight] = useState('');
   const [topbarMenu, setTopbarMenu] = useState<'workspace' | 'notifications' | 'profile' | null>(null);
@@ -417,6 +440,17 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const dismissFloatingPanels = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      if (!target.closest('.topbar-popover, .workspace-select, .notification, .avatar')) setTopbarMenu(null);
+      if (!target.closest('.search-shell')) setSearchQuery('');
+    };
+    document.addEventListener('pointerdown', dismissFloatingPanels);
+    return () => document.removeEventListener('pointerdown', dismissFloatingPanels);
+  }, []);
 
   useEffect(() => {
     const shortcut = (event: KeyboardEvent) => {
@@ -451,13 +485,18 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    const cached = readCachedOverview();
+    if (cached) setData(cached);
+  }, []);
+
+  useEffect(() => {
     // `cancelled` flag isliye: component unmount hone ke baad `setState` call
     // karna React warning deta hai aur memory leak ka signal hai. React ke
     // StrictMode dev double-mount mein bhi yeh pehli fetch ko ignore kara deta.
     let cancelled = false;
 
     loadOverview()
-      .then((payload) => { if (!cancelled) { setData(payload); setError(null); } })
+      .then((payload) => { if (!cancelled) { cacheOverview(payload); setData(payload); setError(null); } })
       .catch((cause: unknown) => {
         if (cancelled) return;
         if (cause instanceof AxiomNetworkError) {
@@ -534,21 +573,39 @@ export default function Home() {
     { label: recommendation.title, detail: `Recommended simulation · ${recommendation.confidencePct}% confidence`, nav: 'Simulations' },
   ].filter((item) => normalizedSearch && `${item.label} ${item.detail}`.toLowerCase().includes(normalizedSearch)).slice(0, 6);
 
-  const askCopilot = (question: string) => {
+  const askCopilot = async (question: string) => {
     const cleanQuestion = question.trim();
-    if (!cleanQuestion) return;
-    const lowerQuestion = cleanQuestion.toLowerCase();
-    let reply = `${bottleneck.summary} Recommended next step: ${recommendation.title}.`;
-    if (lowerQuestion.includes('experiment') || lowerQuestion.includes('recommend')) {
-      reply = `${recommendation.title}: predicted uplift ${signedPct(recommendation.predictedUpliftPct)}, ${recommendation.confidencePct}% confidence, ${humanise(recommendation.riskLevel)} risk.`;
-    } else if (lowerQuestion.includes('bottleneck') || lowerQuestion.includes('why')) {
-      reply = `${bottleneck.stage} is the current bottleneck. ${bottleneck.summary}`;
-    } else if (lowerQuestion.includes('mrr') || lowerQuestion.includes('growth')) {
-      reply = `${growth.metricLabel} is currently ${growth.currentDisplay}. The chart uses the latest ${growth.rangeLabel} evidence window.`;
-    }
-    setCopilotReply(reply);
+    if (!cleanQuestion || copilotLoading) return;
     setCopilotQuery('');
     setCopilotOpen(true);
+    setCopilotLoading(true);
+    try {
+      const response = await fetch('/api/v1/ai', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          question: cleanQuestion,
+          context: {
+            workspace: { id: workspace.id, name: workspace.name, objective: workspace.objective, environment: workspace.environment },
+            dataSource: data.dataSource,
+            dataSourceNote: data.dataSourceNote,
+            metrics: metrics.map(({ key, label, displayValue, deltaPct, direction, comparisonLabel, isImprovement }) => ({ key, label, displayValue, deltaPct, direction, comparisonLabel, isImprovement })),
+            growth: { metricLabel: growth.metricLabel, currentDisplay: growth.currentDisplay, rangeLabel: growth.rangeLabel },
+            bottleneck: { stage: bottleneck.stage, severity: bottleneck.severity, summary: bottleneck.summary, evidenceWindowDays: bottleneck.evidenceWindowDays },
+            recommendation: { title: recommendation.title, description: recommendation.description, predictedUpliftPct: recommendation.predictedUpliftPct, confidencePct: recommendation.confidencePct, riskLevel: recommendation.riskLevel, focusMetric: recommendation.focusMetric },
+            experiments: experiments.map(({ name, focusMetric, status, progressPct, observedLiftPct, isConclusive }) => ({ name, focusMetric, status, progressPct, observedLiftPct, isConclusive })),
+            decisions: decisions.map(({ title, outcome, impactPct, summary }) => ({ title, outcome, impactPct, summary })),
+          },
+        }),
+      });
+      const payload = await response.json() as { reply?: string; message?: string };
+      if (!response.ok || !payload.reply) throw new Error(payload.message || 'AXIOM AI could not answer right now.');
+      setCopilotReply(payload.reply);
+    } catch (cause) {
+      setCopilotReply(cause instanceof Error ? cause.message : 'AXIOM AI could not answer right now.');
+    } finally {
+      setCopilotLoading(false);
+    }
   };
 
   const changeWorkspace = async (workspaceId: string) => {
@@ -576,7 +633,7 @@ export default function Home() {
           ))}
         </nav>
         <FiberWave className="sidebar-wave" />
-        <div className="copilot-card"><strong><Sparkles /> AXIOM AI</strong><p>Ask a question or run an analysis...</p><button onClick={() => setCopilotOpen(true)} type="button" aria-label="Open AXIOM AI"><ArrowRight /></button></div>
+        <div className="copilot-card"><strong><Sparkles /> AXIOM AI</strong><p>Ask questions or analyze evidence.</p><button onClick={() => setCopilotOpen(true)} type="button" aria-label="Open AXIOM AI"><Sparkles /></button></div>
         <button className="collapse" type="button" aria-pressed={sidebarCollapsed} onClick={toggleSidebar}><span className="collapse-icon"><ArrowLeft /></span><span>{sidebarCollapsed ? 'Expand' : 'Collapse'}</span></button>
       </aside>
 
@@ -601,7 +658,7 @@ export default function Home() {
             <button type="button" className={theme === 'neon' ? 'active' : ''} aria-pressed={theme === 'neon'} onClick={() => selectTheme('neon')} title="Neon mode"><Sparkles /><span>Neon</span></button>
           </div>
           <button onClick={() => setTopbarMenu((current) => current === 'notifications' ? null : 'notifications')} className="notification" aria-label="Notifications" aria-expanded={topbarMenu === 'notifications'} type="button"><Bell /><b>3</b></button>
-          <button id="profile-button" className={`avatar${spotlight === 'profile-button' ? ' spotlight' : ''}`} type="button" aria-label="Profile" aria-expanded={topbarMenu === 'profile'} onClick={() => setTopbarMenu((current) => current === 'profile' ? null : 'profile')}>{data.operatorFirstName.charAt(0).toUpperCase()}</button><ChevronDown className="profile-chevron" />
+          <button id="profile-button" className={`avatar${spotlight === 'profile-button' ? ' spotlight' : ''}`} type="button" aria-label="Profile" aria-expanded={topbarMenu === 'profile'} onClick={() => setTopbarMenu((current) => current === 'profile' ? null : 'profile')}>{data.operatorFirstName.charAt(0).toUpperCase()}</button>
 
           {topbarMenu === 'workspace' && <div className="topbar-popover workspace-popover"><small>{data.workspaceContext ? `${humanise(data.workspaceContext.role)} · ${data.workspaceContext.name}` : 'ACTIVE WORKSPACE'}</small><strong>{workspace.name}</strong><p>{workspace.objective ?? workspace.organizationName}</p><div className="workspace-options" role="list" aria-label="Available workspaces">{availableWorkspaces.map((option) => <button key={option.id} type="button" className={option.id === workspace.id ? 'active' : ''} disabled={workspaceSwitching} onClick={() => changeWorkspace(option.id)}><Building2 /><span><b>{option.name}</b><em>{humanise(option.environment)}</em></span>{option.id === workspace.id ? <CircleCheckBig /> : <ArrowRight />}</button>)}</div><button type="button" onClick={() => { setTopbarMenu(null); notify(data.dataSourceNote); }}><CircleCheckBig /> {systemStatus.message}</button></div>}
           {topbarMenu === 'notifications' && <div className="topbar-popover notifications-popover"><small>3 SYSTEM UPDATES</small><button type="button" onClick={() => { setTopbarMenu(null); notify(data.dataSourceNote); }}><CircleCheckBig /><span><b>{systemStatus.label}</b><em>{systemStatus.message}</em></span></button><button type="button" onClick={() => activateSection('Intelligence')}><CircleAlert /><span><b>{bottleneck.stage}</b><em>{humanise(bottleneck.severity)} severity bottleneck</em></span></button><button type="button" onClick={() => activateSection('Simulations')}><Sparkles /><span><b>New recommendation</b><em>{recommendation.title}</em></span></button></div>}
@@ -621,7 +678,7 @@ export default function Home() {
               <p>AXIOM is monitoring your <b>growth system</b>{isDemoData ? <> · <b>demo seed data</b></> : <> · <b>measured workspace data</b></>}</p>
             </div>
             <button className="live-status" type="button" title={data.dataSourceNote} onClick={() => notify(data.dataSourceNote)}>
-              <i /> <b>{systemStatus.label}</b><span>{systemStatus.message}</span><ChevronDown />
+              <i /> <b>{systemStatus.label}</b><span>{systemStatus.message}</span>
             </button>
           </section>
 
@@ -703,7 +760,7 @@ export default function Home() {
 
       {selectedDecision && <DecisionDetailModal decision={selectedDecision} onClose={() => setSelectedDecision(null)} onAnalyze={() => { setCopilotReply(`${selectedDecision.title}: ${selectedDecision.summary} Measured impact was ${signedPct(selectedDecision.impactPct)}.`); setSelectedDecision(null); setCopilotOpen(true); }} />}
 
-      {copilotOpen && <aside className="copilot-drawer" aria-label="AXIOM AI"><header><span><Sparkles /> AXIOM AI</span><button type="button" aria-label="Close AXIOM AI" onClick={() => setCopilotOpen(false)}><X /></button></header><div className="copilot-message"><BrainCircuit /><p>{copilotReply || bottleneck.summary}</p></div><button className="prompt-chip" type="button" onClick={() => askCopilot('Explain the bottleneck')}>Explain the bottleneck</button><button className="prompt-chip" type="button" onClick={() => setReviewOpen(true)}>Review recommended experiment</button><form onSubmit={(event) => { event.preventDefault(); askCopilot(copilotQuery); }}><input value={copilotQuery} onChange={(event) => setCopilotQuery(event.target.value)} placeholder="Ask AXIOM anything..." aria-label="Ask AXIOM anything" /><button type="submit" aria-label="Send question"><Send /></button></form></aside>}
+      {copilotOpen && <div className="copilot-backdrop" role="presentation" onMouseDown={() => setCopilotOpen(false)}><aside className="copilot-drawer" aria-label="AXIOM AI" onMouseDown={(event) => event.stopPropagation()}><header><span><i><Sparkles /></i><b>AXIOM AI</b><small>Evidence-aware copilot</small></span><button type="button" aria-label="Close AXIOM AI" onClick={() => setCopilotOpen(false)}><X /></button></header><div className={`copilot-message${copilotLoading ? ' loading' : ''}`}><BrainCircuit /><div><small>{copilotLoading ? 'THINKING WITH WORKSPACE EVIDENCE' : 'AXIOM ANALYSIS'}</small><p>{copilotLoading ? 'Reviewing metrics, experiments, and decision history…' : (copilotReply || `I’m ready. Ask me about ${bottleneck.stage}, your metrics, experiments, or the next best move.`)}</p></div></div><div className="copilot-prompts"><button className="prompt-chip" type="button" disabled={copilotLoading} onClick={() => void askCopilot('Explain the current bottleneck and the evidence behind it.')}>Explain bottleneck</button><button className="prompt-chip" type="button" disabled={copilotLoading} onClick={() => void askCopilot('Review the recommended experiment and explain risks, confidence, and next steps.')}>Review experiment</button><button className="prompt-chip" type="button" disabled={copilotLoading} onClick={() => void askCopilot('Summarize the health of this workspace and identify the top priority.')}>Workspace health</button></div><form onSubmit={(event) => { event.preventDefault(); void askCopilot(copilotQuery); }}><input value={copilotQuery} onChange={(event) => setCopilotQuery(event.target.value)} placeholder="Ask about metrics, risks, or strategy..." aria-label="Ask AXIOM anything" disabled={copilotLoading} /><button type="submit" aria-label="Send question" disabled={copilotLoading || !copilotQuery.trim()}><Send /></button></form><footer><ShieldCheck /> Uses governed workspace evidence · human approval stays required</footer></aside></div>}
 
       {toast && <div className="toast" role="status"><CircleCheckBig /> {toast}</div>}
     </main>

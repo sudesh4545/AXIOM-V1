@@ -62,9 +62,12 @@ async function attachRuntimeState(row: SnapshotRow, identity: RequestIdentity, a
   payload.ingestion = ingestion;
   payload.opportunities ??= rankOpportunities(payload.bottleneck, payload.measurement?.observedUsers ?? 0);
   await syncApprovedExperimentDelivery(payload, access.active.id);
-  await attachExperimentDeliveryState(payload, access.active.id);
-  payload.riskPolicy = await loadRiskPolicy(access.active.id);
-  await attachDecisionReceipts(payload, access.active.id);
+  const [, riskPolicy] = await Promise.all([
+    attachExperimentDeliveryState(payload, access.active.id),
+    loadRiskPolicy(access.active.id),
+    attachDecisionReceipts(payload, access.active.id),
+  ]);
+  payload.riskPolicy = riskPolicy;
   payload.storage = { state: 'connected', revision: row.revision, lastSavedAt: row.updated_at };
   payload.systemStatus = { state: 'healthy', label: 'Live', message: 'API and database connected' };
   return payload;

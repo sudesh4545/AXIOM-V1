@@ -223,6 +223,15 @@ svg { display: block; }
    Flex column mein: header fix, content shrink kar sakta hai, aur footer button
    `margin-top: auto` se neeche pin ho jaata — kabhi katta nahi. */
 .panel { --panel-rgb: 35,123,255; position: relative; min-height: 0; height: 100%; display: flex; flex-direction: column; overflow: hidden; isolation: isolate; border: 1px solid #365995; border-radius: 16px; background: radial-gradient(circle at 20% -5%, rgba(16,83,181,.17), transparent 42%), linear-gradient(135deg,rgba(7,17,43,.96),rgba(3,8,24,.94)); box-shadow: inset 0 0 33px rgba(var(--panel-rgb),.1), 0 0 8px rgba(var(--panel-rgb),.24); animation: panelAura 4.4s ease-in-out infinite; }
+/* Dashboard entry: every section settles into its final position in a short, staggered sequence. */
+.dashboard > .welcome-row { animation: dashboardEnter .42s both; }
+.dashboard .analysis-grid .panel { animation: dashboardEnter .52s both, panelAura 4.4s .62s ease-in-out infinite; }
+.dashboard .analysis-grid .panel:nth-child(1) { animation-delay: .26s,.78s; }
+.dashboard .analysis-grid .panel:nth-child(2) { animation-delay: .34s,.86s; }
+.dashboard .analysis-grid .panel:nth-child(3) { animation-delay: .42s,.94s; }
+.dashboard .operations-grid .panel { animation: dashboardEnter .54s both, panelAura 4.4s .74s ease-in-out infinite; }
+.dashboard .operations-grid .panel:nth-child(1) { animation-delay: .5s,1.04s; }
+.dashboard .operations-grid .panel:nth-child(2) { animation-delay: .59s,1.13s; }
 .panel.panel::before { content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none; opacity: .38; background-image: radial-gradient(circle, rgba(var(--panel-rgb),.9) 0 1px, transparent 1.7px), radial-gradient(circle, rgba(var(--panel-rgb),.58) 0 1px, transparent 1.6px), radial-gradient(circle, rgba(230,247,255,.5) 0 1px, transparent 1.6px); background-size: 43px 47px, 67px 61px, 89px 73px; background-position: 7px 10px, 28px 23px, 55px 41px; mask-image: linear-gradient(135deg, rgba(0,0,0,.88), rgba(0,0,0,.14) 44%, rgba(0,0,0,.7)); animation: panelParticles 14s linear infinite; }
 .panel::after { content: ""; position: absolute; z-index: 0; left: -55%; bottom: 0; width: 55%; height: 1px; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(var(--panel-rgb),1), #b15cff, transparent); box-shadow: 0 0 9px rgba(var(--panel-rgb),.95), 0 0 18px rgba(var(--panel-rgb),.42); opacity: .9; animation: panelEdgeRun 5.5s ease-in-out infinite; }
 .panel > * { position: relative; z-index: 1; }
@@ -446,6 +455,7 @@ svg { display: block; }
 @keyframes actionPulse { 0%,100% { filter:brightness(1); } 50% { filter:brightness(1.16); } }
 @keyframes liveBlink { 0%,100% { opacity:.7; transform:scale(.85); } 50% { opacity:1; transform:scale(1.1); } }
 @keyframes cardEnter { from { opacity:0; transform:translateY(9px); } to { opacity:1; transform:none; } }
+@keyframes dashboardEnter { from { opacity:0; transform:translateY(15px) scale(.985); filter:blur(3px); } 72% { opacity:1; } to { opacity:1; transform:translateY(0) scale(1); filter:blur(0); } }
 @keyframes cardBreath { 0%,100% { filter:brightness(1); } 50% { filter:brightness(1.07); } }
 @keyframes cardSweep { 0%,60% { transform:translateX(-120%); } 83%,100% { transform:translateX(130%); } }
 @keyframes borderRun { 0%,100% { transform:translateX(-25%); opacity:.35; } 50% { transform:translateX(25%); opacity:1; } }
@@ -851,6 +861,9 @@ svg { display: block; }
   .chart-bars i,
   .chart-particles i,
   .chart-value,
+  .dashboard > .welcome-row,
+  .dashboard .analysis-grid .panel,
+  .dashboard .operations-grid .panel,
   .panel::before,
   .panel::after,
   .recommendation-panel h2 svg,
@@ -959,10 +972,9 @@ svg { display: block; }
 .telemetry-layout { display:grid;grid-template-columns:minmax(0,1.7fr) minmax(280px,.64fr);gap:12px; }
 .telemetry-canvas { display:grid;grid-template-rows:43px auto minmax(0,1fr) 26px; }
 .telemetry-value { padding:11px 17px 3px;display:flex;align-items:flex-end;justify-content:space-between; }.telemetry-value small { display:block;color:#6b7d99;font-size:7px;letter-spacing:.12em; }.telemetry-value strong { display:block;margin-top:1px;color:#fff;font-size:clamp(25px,4vh,34px); }.telemetry-value > b { margin-bottom:7px;padding:5px 8px;border:1px solid rgba(27,224,174,.25);border-radius:7px;color:#24e7b1;background:rgba(15,129,100,.1);font-size:8px;font-weight:600; }
-.telemetry-plot { position:relative;min-height:0;margin:3px 16px 0 54px;border-left:1px solid #253657;border-bottom:1px solid #253657;background-image:linear-gradient(rgba(62,95,145,.16) 1px,transparent 1px),linear-gradient(90deg,rgba(62,95,145,.11) 1px,transparent 1px);background-size:100% 25%,12.5% 100%; }
+.telemetry-plot { position:relative;min-height:0;margin:3px 16px 0 54px;overflow:hidden;border-left:1px solid #253657;border-bottom:1px solid #253657;background-image:linear-gradient(rgba(62,95,145,.12) 1px,transparent 1px),linear-gradient(90deg,rgba(62,95,145,.075) 1px,transparent 1px);background-size:100% 33.333%,20% 100%; }
 .telemetry-axis { position:absolute;left:-48px;inset-block:0;display:flex;flex-direction:column-reverse;justify-content:space-between;color:#6f7f9e;font-size:7px; }
-.telemetry-bars { position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:space-around;padding:0 3%; }.telemetry-bars > i { width:2.8%;position:relative;background:linear-gradient(to top,rgba(34,125,255,.05),rgba(27,177,255,.3));border-top:1px solid rgba(49,212,255,.7);animation:telemetryRise .55s ease-out both;animation-delay:calc(var(--bar-index) * 25ms); }.telemetry-bars > i b { position:absolute;left:50%;top:-2px;width:3px;height:3px;border-radius:50%;background:#adf6ff;box-shadow:0 0 8px #24d9ff; }
-.telemetry-plot > svg { position:absolute;inset:0;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 0 5px #1fd4ff); }.telemetry-plot polyline { fill:none;stroke:#54e3ff;stroke-width:1.2; }
+.telemetry-plot > svg { position:absolute;inset:0;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 0 5px #1fd4ff); }.telemetry-area { fill:url(#telemetry-area-fill); }.telemetry-line { fill:none;stroke:#54e3ff;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round; }.telemetry-stems,.telemetry-points,.telemetry-signals { position:absolute;inset:0;pointer-events:none; }.telemetry-stems > i { position:absolute;width:1px;transform:translateX(-50%);background:linear-gradient(to bottom,rgba(31,206,255,.78),rgba(24,134,255,.16) 64%,transparent);box-shadow:0 0 5px rgba(29,207,255,.42); }.telemetry-points > i { position:absolute;width:6px;height:6px;border:1px solid rgba(227,253,255,.96);border-radius:50%;transform:translate(-50%,-50%);background:#effeff;box-shadow:0 0 5px #fff,0 0 12px #24d9ff; }.telemetry-signals > i { position:absolute;width:3px;height:3px;border-radius:50%;transform:translate(-50%,-50%);background:#3585ff;box-shadow:0 0 7px #248fff;opacity:.86; }
 .telemetry-dates { padding:5px 16px 0 54px;display:flex;justify-content:space-between;color:#74839d;font-size:7px; }
 .metric-radar { padding-bottom:10px;display:flex;flex-direction:column; }.radar-metric { flex:1;min-height:0;margin:0 13px;display:grid;grid-template-columns:25px 1fr auto;align-items:center;gap:9px;border-bottom:1px solid #243252; }.radar-metric > i { width:24px;height:24px;display:grid;place-items:center;border:1px solid #314466;border-radius:7px;color:#60728e;font-size:7px;font-style:normal; }.radar-metric span { display:flex;flex-direction:column; }.radar-metric small { color:#8d9bb4;font-size:8px; }.radar-metric strong { margin-top:2px;color:#f5f8ff;font-size:clamp(15px,2.4vh,19px); }.radar-metric > b { color:#2beab6;font-size:10px; }.radar-metric.bad > b { color:#ff507f; }
 .radar-note { margin:10px 13px 0;padding:10px;display:flex;gap:9px;align-items:center;border:1px solid rgba(37,190,255,.28);border-radius:10px;background:rgba(26,116,167,.09); }.radar-note > svg { width:18px;color:#38d9ff; }.radar-note span { display:flex;flex-direction:column; }.radar-note b { color:#dff8ff;font-size:9px; }.radar-note small { margin-top:2px;color:#72839f;font-size:7px;line-height:1.3; }
@@ -1457,3 +1469,231 @@ html[data-theme="dark"],html[data-theme="neon"] { color-scheme:dark; }
 @media (max-width:640px) { .experiment-analysis-summary { grid-template-columns:1fr; } .experiment-analysis-summary p { grid-column:1; } }
 @media (max-width:900px) { .opportunity-rank-grid { grid-template-columns:1fr; } }
 @media (min-width:1201px) and (max-height:780px) { .opportunity-rank-grid { margin-top:7px; gap:6px; } .opportunity-rank-grid button { padding:6px 7px; } .opportunity-rank-grid small { display:none; } }
+
+/* ─────────────── Dashboard visual QA fixes (Aug 2026) ─────────────── */
+
+/* The version mark is a deliberate product badge rather than a faint suffix. */
+.brand { align-items:center; }
+.brand em { min-width:39px;height:29px;margin-top:-2px;padding:0 7px;display:inline-flex;align-items:center;justify-content:center;gap:1px;position:relative;overflow:hidden;border-color:rgba(50,222,255,.82);border-radius:10px;background:linear-gradient(145deg,rgba(17,193,244,.16),rgba(120,64,255,.2));box-shadow:inset 0 0 12px rgba(38,206,255,.14),0 0 12px rgba(47,158,255,.22);color:#8af1ff;font-size:12px;font-weight:800;letter-spacing:.02em; }
+.brand em::after { content:"";position:absolute;inset:2px;border:1px solid rgba(255,255,255,.08);border-radius:7px;pointer-events:none; }
+.brand em b { color:#f7fbff;font-size:13px;line-height:1; }
+.brand em span { color:#50e5ff;font-size:11px;line-height:1; }
+
+/* Give every metric a clear title/value lane so neither can collide with the orb. */
+.metric-card { grid-template-columns:52px minmax(0,1fr) 76px;column-gap:9px;padding-inline:13px; }
+.metric-copy { min-width:0;padding-left:1px;position:relative;z-index:3; }
+.metric-card p { width:max-content;max-width:calc(100% + 42px);margin-bottom:7px;padding:0 0 5px;position:relative;overflow:visible;border:0;background:transparent;color:rgb(var(--tone));font-size:13px;font-weight:760;letter-spacing:.01em;line-height:1.15;white-space:nowrap; }
+.metric-card p::before { content:"";width:26px;height:2px;position:absolute;left:0;bottom:0;border-radius:2px;background:linear-gradient(90deg,rgb(var(--tone)),transparent);box-shadow:0 0 7px rgba(var(--tone),.75); }
+.metric-card strong { white-space:nowrap; }
+.metric-card small { white-space:nowrap; }
+.metric-card em { display:inline-block;white-space:nowrap; }
+
+/* The two analysis CTAs share the same baseline and footprint. */
+.analysis-grid .bottleneck-panel,.analysis-grid .recommendation-panel { padding-bottom:0; }
+.analysis-grid .secondary-action,.analysis-grid .primary-action { width:auto;height:clamp(32px,4.44vh,42px);min-height:32px;margin:0;position:absolute;left:18px;right:18px;bottom:11px;flex:0 0 clamp(32px,4.44vh,42px); }
+.analysis-grid .recommendation-panel h3 { margin-bottom:clamp(11px,1.8vh,17px); }
+.analysis-grid .prediction { padding-bottom:clamp(9px,1.38vh,13px); }
+.analysis-grid .risk { margin:clamp(4px,.64vh,6px) clamp(14px,2.12vh,20px); }
+
+/* Use the formerly empty footer gap for the operational rows. */
+.operations-grid .panel-link { height:28px;margin:3px 20px 8px; }
+.operations-grid .experiments-panel .experiment-row { flex:1 1 0;height:auto;min-height:30px; }
+.operations-grid .decision-list { display:flex;flex-direction:column; }
+.operations-grid .decision-row { flex:1 1 0;height:auto;min-height:38px; }
+
+/* Radar header and date lanes cannot wrap or overlap at normal desktop widths. */
+.telemetry-layout { grid-template-columns:minmax(0,1.62fr) minmax(330px,.72fr); }
+.metric-radar { padding-bottom:12px; }
+.metric-radar .surface-kicker { min-height:56px;height:56px;padding-inline:14px;gap:12px; }
+.metric-radar .surface-kicker > span { min-width:0;flex:1;font-size:17px;line-height:1.1;white-space:nowrap; }
+.metric-radar .surface-kicker > span svg { flex:0 0 auto; }
+.metric-radar .surface-kicker > em { flex:0 0 auto;padding:5px 7px;font-size:11px;letter-spacing:.08em;line-height:1;white-space:nowrap; }
+.radar-metric { min-height:62px;margin-inline:14px;grid-template-columns:30px minmax(0,1fr) auto;gap:10px; }
+.radar-metric > i { width:28px;height:28px; }
+.radar-metric span { min-width:0; }
+.radar-metric small,.radar-metric strong { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.radar-note { flex:0 0 auto;min-height:62px;margin:10px 14px 0;padding:9px 11px; }
+.telemetry-canvas { padding-bottom:8px; }
+.telemetry-dates { min-height:32px;padding:8px 16px 7px 54px;align-items:center;line-height:1;white-space:nowrap; }
+.chart { padding-bottom:42px; }
+.chart-dates { bottom:18px;line-height:1; }
+.chart-legend { bottom:1px; }
+
+/* Top controls now glow as one intentional command bar. */
+.workspace-select,.search { transition:border-color .25s ease,box-shadow .25s ease,background .25s ease; }
+.search { overflow:hidden;animation:searchGlow 5.4s ease-in-out infinite; }
+.search::after { content:"";position:absolute;inset:-1px;pointer-events:none;background:linear-gradient(110deg,transparent 25%,rgba(46,213,255,.16) 48%,transparent 70%);transform:translateX(-120%);animation:workspaceSweep 7.6s 1s ease-in-out infinite; }
+.search > * { position:relative;z-index:1; }
+.workspace-select:hover,.search:focus-within { border-color:#38bde9;box-shadow:inset 0 0 18px rgba(25,154,255,.12),0 0 17px rgba(35,187,255,.2); }
+@keyframes searchGlow { 0%,100% { box-shadow:inset 0 0 16px rgba(17,93,196,.05),0 0 8px rgba(34,114,255,.08); } 50% { box-shadow:inset 0 0 20px rgba(27,144,255,.1),0 0 16px rgba(35,196,255,.16); } }
+
+/* AXIOM AI launcher and drawer: no floating arrow, stronger hierarchy. */
+.copilot-card { padding:14px 13px; }
+.copilot-card strong { position:absolute;top:14px;left:14px;right:14px; }
+.copilot-card p { max-width:108px;margin:0;position:absolute;top:48px;left:14px;line-height:1.48; }
+.copilot-card button { left:auto;right:13px;bottom:13px;width:38px;height:38px;padding:0;display:grid;place-items:center;border-radius:12px;animation:none; }
+.copilot-card button svg { width:17px; }
+.copilot-backdrop { position:fixed;inset:0;z-index:44;background:rgba(0,3,13,.48);backdrop-filter:blur(5px);animation:drawerBackdropIn .2s ease-out both; }
+.copilot-drawer { z-index:45;right:18px;top:18px;bottom:18px;width:min(430px,calc(100% - 36px));padding:0;overflow:hidden;border-color:#5f63dd;border-radius:20px;background:radial-gradient(circle at 90% 0,rgba(65,71,221,.24),transparent 28%),linear-gradient(155deg,rgba(10,23,52,.995),rgba(3,8,24,.995));box-shadow:-24px 0 90px rgba(0,0,0,.52),0 0 35px rgba(81,66,255,.2);animation:drawerIn .28s cubic-bezier(.2,.8,.2,1) both; }
+.copilot-drawer header { min-height:72px;padding:12px 16px;border-bottom-color:#2a3d66;background:rgba(8,17,39,.72); }
+.copilot-drawer header > span { display:grid;grid-template-columns:38px 1fr;grid-template-rows:auto auto;gap:1px 10px; }
+.copilot-drawer header > span > i { grid-row:1/3;width:38px;height:38px;display:grid;place-items:center;border:1px solid rgba(51,217,255,.45);border-radius:11px;color:#55e2ff;background:linear-gradient(145deg,rgba(18,174,221,.16),rgba(107,55,220,.2));box-shadow:0 0 16px rgba(54,177,255,.16);font-style:normal; }
+.copilot-drawer header > span > b { align-self:end;font-size:15px; }
+.copilot-drawer header > span > small { color:#7e90af;font-size:11px; }
+.copilot-drawer header button { cursor:pointer; }
+.copilot-message { min-height:142px;margin:18px;padding:17px;border:1px solid rgba(45,157,225,.23);background:linear-gradient(145deg,rgba(13,35,72,.88),rgba(10,23,54,.78)); }
+.copilot-message > svg { margin-top:18px; }
+.copilot-message > div { min-width:0; }
+.copilot-message small { color:#40dafa;font-size:10px;font-weight:750;letter-spacing:.09em; }
+.copilot-message p { margin:7px 0 0;color:#d2dbee;font-size:14px;line-height:1.62;white-space:pre-wrap; }
+.copilot-message.loading { border-color:rgba(68,211,255,.42);box-shadow:inset 0 0 24px rgba(30,139,222,.08); }
+.copilot-message.loading > svg { animation:iconSpin 2.2s linear infinite; }
+.copilot-prompts { padding:0 18px;display:grid;grid-template-columns:1fr 1fr;gap:8px; }
+.copilot-prompts .prompt-chip { min-height:38px;margin:0;padding:0 11px;text-align:left; }
+.copilot-prompts .prompt-chip { color:#ced9eb; }
+.copilot-prompts .prompt-chip:last-child { grid-column:1/-1; }
+.copilot-drawer > form { height:50px;margin:auto 18px 10px;flex:0 0 50px;border-radius:12px;background:rgba(4,11,27,.7); }
+.copilot-drawer > form button:disabled,.prompt-chip:disabled { opacity:.5;cursor:not-allowed; }
+.copilot-drawer footer { min-height:42px;padding:0 18px;display:flex;align-items:center;gap:8px;border-top:1px solid #243556;color:#71839f;font-size:10px; }
+.copilot-drawer footer svg { width:14px;color:#2bd9a8; }
+@keyframes drawerIn { from { opacity:0;transform:translateX(30px) scale(.985); } to { opacity:1;transform:none; } }
+@keyframes drawerBackdropIn { from { opacity:0; } to { opacity:1; } }
+
+/* Dark is a neutral software theme; Neon keeps the full electric palette. */
+.theme-dark .brand > span { color:#f5f7fb;text-shadow:none; }
+.theme-dark .metric-card,.theme-dark .panel,.theme-dark .command-surface { box-shadow:0 12px 34px rgba(0,0,0,.28),inset 0 1px rgba(255,255,255,.03); }
+.theme-dark .metric-card { border-color:#354c69; }
+.theme-dark .metric-card p { color:rgb(var(--tone)); }
+.theme-dark .topbar { box-shadow:0 8px 24px rgba(0,0,0,.24); }
+
+/* Light theme uses real contrast throughout the dashboard, not a faded neon wash. */
+.theme-light .brand { text-shadow:none; }
+.theme-light .brand > span { color:#12223b; }
+.theme-light .brand-x { filter:drop-shadow(0 0 5px rgba(54,107,235,.3)); }
+.theme-light .brand em { border-color:#118bc2;background:linear-gradient(145deg,#e7f9ff,#eee9ff);box-shadow:0 4px 12px rgba(42,100,170,.12); }
+.theme-light .brand em b { color:#263b68; }.theme-light .brand em span { color:#087fae; }
+.theme-light .welcome-row h1,.theme-light .welcome-row p { color:#162640; }
+.theme-light .welcome-row p b:first-child { color:#0877bd; }.theme-light .welcome-row p b:last-child { color:#6e42cd; }
+.theme-light .live-status { border-color:#b8c8dc;background:#fff;color:#38506e;box-shadow:0 6px 18px rgba(44,73,110,.08); }
+.theme-light .live-status b { color:#08765a; }
+.theme-light .live-status span { color:#465b75; }
+.theme-light .metric-card { border-color:rgba(var(--tone),.46);background:radial-gradient(circle at 8% 16%,rgba(var(--tone),.1),transparent 34%),linear-gradient(145deg,#fff,#f4f8fd);box-shadow:0 9px 24px rgba(38,71,108,.09),inset 0 1px #fff; }
+.theme-light .metric-card p { color:rgb(var(--tone)); }.theme-light .metric-card strong { color:#152642; }.theme-light .metric-card small { color:#087d5b; }.theme-light .metric-card em { color:#5f718a; }
+.theme-light .metric-orb { background:radial-gradient(circle,#fff 35%,rgba(var(--tone),.13)); }
+.theme-light .panel > header { border-color:#cbd7e6;background:rgba(247,250,254,.88); }
+.theme-light .growth-panel header button { border-color:#bdcadb;background:#eef3f9;color:#314661; }
+.theme-light .chart-grid { border-color:#c8d5e4;background-image:linear-gradient(rgba(86,119,157,.16) 1px,transparent 1px),linear-gradient(90deg,rgba(86,119,157,.13) 1px,transparent 1px); }
+.theme-light .axis-values,.theme-light .chart-dates,.theme-light .chart-legend { color:#61738d; }
+.theme-light .bottleneck-panel,.theme-light .recommendation-panel { background:linear-gradient(145deg,#fff,#f8f9fe); }
+.theme-light .bottleneck-panel h2 { color:#c4255e; }.theme-light .recommendation-panel h2 { color:#087caa; }
+.theme-light .severity,.theme-light .risk,.theme-light .prediction span,.theme-light .prediction em { color:#53647d; }
+.theme-light .bottleneck-panel > p,.theme-light .funnel-bars span,.theme-light .funnel-bars b,.theme-light .funnel-bars em { color:#3e506a; }
+.theme-light .prediction { border-color:#cbd6e5; }.theme-light .prediction > div:last-child { border-color:#cbd6e5; }.theme-light .prediction b { color:#172944; }
+.theme-light .secondary-action { border-color:#9cb4cf;background:#eff4fa;color:#203550; }.theme-light .secondary-action svg { color:#315c86; }
+.theme-light .primary-action { color:#fff; }
+.theme-light .table-head { color:#64758d; }.theme-light .experiment-row > span,.theme-light .progress b { color:#52647c; }.theme-light .progress::before { background:#d6e0ec; }
+.theme-light .decision-list { scrollbar-color:#9eb2ca transparent; }.theme-light .decision-row { border-color:#d2dce8; }.theme-light .decision-row > span small,.theme-light .decision-row > b { color:#62748d; }.theme-light .decision-row .arrow { color:#637791; }
+.theme-light .panel-link { color:#087eb4; }
+.theme-light .command-surface { color:#152642; }.theme-light .surface-kicker { border-color:#cbd7e5; }.theme-light .surface-kicker > span { color:#182a46; }
+.theme-light .telemetry-value strong,.theme-light .radar-metric strong { color:#172944; }.theme-light .telemetry-value small,.theme-light .telemetry-axis,.theme-light .telemetry-dates,.theme-light .radar-metric small { color:#60738d; }
+.theme-light .telemetry-plot { border-color:#bfcddd;background-image:linear-gradient(rgba(73,110,152,.16) 1px,transparent 1px),linear-gradient(90deg,rgba(73,110,152,.12) 1px,transparent 1px); }
+.theme-light .radar-metric { border-color:#d2dce8; }.theme-light .radar-metric > i { border-color:#b8c8da;color:#526783;background:#eef4fa; }.theme-light .radar-note { border-color:#a9cadd;background:#eef8fc; }.theme-light .radar-note b { color:#143958; }.theme-light .radar-note small { color:#557087; }
+.theme-light .copilot-drawer { border-color:#9caed1;background:radial-gradient(circle at 90% 0,rgba(96,88,214,.12),transparent 28%),linear-gradient(155deg,#fff,#f2f6fc);box-shadow:-24px 0 70px rgba(35,55,84,.2); }.theme-light .copilot-drawer header { border-color:#d0dae8;background:#f7f9fd; }.theme-light .copilot-drawer header b { color:#172944; }.theme-light .copilot-drawer header small { color:#657891; }.theme-light .copilot-drawer header button { border-color:#c2d0e1;background:#fff;color:#29415f; }
+.theme-light .copilot-message { border-color:#bed4e5;background:linear-gradient(145deg,#f4f9fe,#edf3fb); }.theme-light .copilot-message p { color:#263b57; }.theme-light .copilot-drawer > form { border-color:#b9c9dd;background:#fff; }.theme-light .copilot-drawer > form input { color:#182a45; }.theme-light .copilot-drawer footer { border-color:#d2dce8;color:#60728b; }
+.theme-light .copilot-prompts .prompt-chip { border-color:#bfd0e2;background:#eef4fa;color:#263b57; }
+.theme-light .copilot-prompts .prompt-chip:hover { border-color:#55afd5;background:#e6f4fb; }
+
+@media (max-width:1200px) {
+  .telemetry-layout { grid-template-columns:1fr; }
+  .metric-radar { min-height:420px; }
+}
+
+@media (max-width:760px) {
+  .metric-card { grid-template-columns:50px minmax(0,1fr); }
+  .metric-card .sparkline { grid-column:1/-1;width:100%; }
+  .copilot-drawer { inset:10px;width:auto; }
+  .copilot-prompts { grid-template-columns:1fr; }
+  .copilot-prompts .prompt-chip:last-child { grid-column:auto; }
+}
+
+/* ─────────────── User-requested neutral Light / true Black correction ─────────────── */
+
+/* Dark mode is deliberately near-black. Bright electric surfaces remain exclusive to Neon. */
+.app-shell.theme-dark { --bg:#000;--panel:#08090b;--text:#f5f7fa;--muted:#9da6b3;background:#000;color:#f5f7fa; }
+.theme-dark .sidebar { border-color:#1d1f24;background:#020202;box-shadow:6px 0 24px rgba(0,0,0,.7); }
+.theme-dark .topbar { border-color:#1c1e22;background:#020202;box-shadow:0 8px 25px rgba(0,0,0,.65); }
+.theme-dark .dashboard,.theme-dark .section-page,.theme-dark .section-page.command-page { background:#000; }
+.theme-dark .dashboard::after,.theme-dark .ambient-network,.theme-dark .sidebar::before,.theme-dark .topbar::before,.theme-dark .command-page::after { opacity:.08; }
+.theme-dark .panel,.theme-dark .metric-card,.theme-dark .command-surface { border-color:#26282d;background:linear-gradient(145deg,#0a0b0d,#050506);box-shadow:0 12px 30px rgba(0,0,0,.65),inset 0 1px rgba(255,255,255,.025);animation:none; }
+.theme-dark .panel::before,.theme-dark .metric-card::before,.theme-dark .command-surface::before { opacity:.08; }
+.theme-dark .bottleneck-panel,.theme-dark .recommendation-panel { border-color:#292b31;background:linear-gradient(145deg,#0a0b0d,#050506); }
+.theme-dark .workspace-select,.theme-dark .search,.theme-dark .theme-switcher,.theme-dark .topbar-popover,.theme-dark .search-results { border-color:#292c32;background:#070708;box-shadow:0 10px 30px rgba(0,0,0,.55); }
+.theme-dark .nav-item { color:#aeb6c2; }.theme-dark .nav-item.active { border-color:#3a414d;background:#111318;box-shadow:inset 0 0 18px rgba(255,255,255,.025); }
+.theme-dark .live-status { border-color:#292c32;background:#070708;box-shadow:none; }
+.theme-dark .secondary-action { border-color:#343842;background:#0b0d12;box-shadow:none; }
+.theme-dark .primary-action { border-color:#405f91;background:linear-gradient(90deg,#0d6eaa,#2347bc 58%,#6932b8);box-shadow:inset 0 0 10px rgba(76,186,255,.16);animation:none; }
+.theme-dark .copilot-card { border-color:#34303e;background:#070708;box-shadow:inset 0 0 24px rgba(111,67,181,.08),0 8px 24px rgba(0,0,0,.38); }
+.theme-dark .copilot-card::before { opacity:.12; }
+.theme-dark .copilot-card button { border-color:#514269;background:#181221;box-shadow:none;color:#cda7ff; }
+
+/* Light mode uses one calm slate system: white surfaces, neutral borders, restrained accents. */
+.app-shell.theme-light { --bg:#f4f6f8;--panel:#fff;--text:#172033;--muted:#667085;background:#f4f6f8;color:#172033; }
+.theme-light .sidebar { border-color:#dce2e9;background:#fff;box-shadow:5px 0 18px rgba(25,38,58,.045); }
+.theme-light .topbar { border-color:#dce2e9;background:#fff;box-shadow:0 5px 18px rgba(25,38,58,.045); }
+.theme-light .dashboard,.theme-light .section-page,.theme-light .section-page.command-page { background:#f4f6f8; }
+.theme-light .dashboard::after,.theme-light .ambient-network,.theme-light .sidebar::before,.theme-light .topbar::before,.theme-light .command-page::after { opacity:.025; }
+.theme-light .panel,.theme-light .metric-card,.theme-light .command-surface { border-color:#d9e0e8;background:#fff;box-shadow:0 7px 20px rgba(28,43,64,.065),inset 0 1px #fff;animation:none; }
+.theme-light .panel::before,.theme-light .metric-card::before,.theme-light .command-surface::before { opacity:.025; }
+.theme-light .panel::after,.theme-light .command-surface::after { opacity:.12; }
+.theme-light .bottleneck-panel,.theme-light .recommendation-panel { border-color:#d9e0e8;background:#fff; }
+.theme-light .workspace-select,.theme-light .search,.theme-light .theme-switcher { border-color:#d6dde6;background:#fff;box-shadow:0 3px 10px rgba(25,38,58,.04);animation:none; }
+.theme-light .workspace-select::before,.theme-light .workspace-select::after,.theme-light .search::after { opacity:.12;animation:none; }
+.theme-light .nav-item { color:#4b596d; }.theme-light .nav-item > i { color:#627086; }
+.theme-light .nav-item.active { border-color:#c5d2e1;color:#183c63;background:#edf3f9;box-shadow:0 4px 12px rgba(34,61,91,.07); }
+.theme-light .nav-item.active::before { opacity:.08; }
+.theme-light .live-status { border-color:#d6dde6;background:#fff;color:#475467;box-shadow:0 3px 10px rgba(25,38,58,.04); }
+.theme-light .metric-card { border-color:#d9e0e8;background:#fff; }
+.theme-light .metric-card::after { opacity:.26; }
+.theme-light .metric-orb { box-shadow:inset 0 0 14px rgba(var(--tone),.08),0 3px 10px rgba(31,41,55,.06);filter:saturate(.8); }
+.theme-light .sparkline { filter:saturate(.78);opacity:.86; }
+.theme-light .panel > header { border-color:#e1e6ec;background:#fbfcfd; }
+.theme-light .bottleneck-panel h2 { color:#b4234d; }.theme-light .recommendation-panel h2 { color:#166b8f; }
+.theme-light .funnel-bars i { filter:saturate(.72); }
+.theme-light .severity b { border-color:#d6a3b3;background:#f8e9ee;color:#9c2147;box-shadow:none; }
+.theme-light .risk b { border-color:#a9d4c4;background:#eaf7f2;color:#087554; }
+.theme-light .secondary-action { border-color:#cbd5e1;background:#f8fafc;color:#24364b;box-shadow:none; }
+.theme-light .primary-action { border-color:#5675bd;background:linear-gradient(90deg,#2679b6,#3d5fc4 58%,#7451bc);box-shadow:0 5px 13px rgba(51,77,139,.16);animation:none; }
+.theme-light .primary-action::before { display:none; }
+.theme-light .panel-link { color:#176f96; }
+.theme-light .progress i,.theme-light .chart-path,.theme-light .telemetry-plot > svg { filter:saturate(.72); }
+.theme-light .copilot-card { border-color:#d7dce7;background:#fff;box-shadow:0 7px 18px rgba(29,42,61,.07); }
+.theme-light .copilot-card::before { opacity:.025;animation:none; }
+.theme-light .copilot-card strong { color:#27364b; }.theme-light .copilot-card strong svg { color:#7752a8;filter:none;animation:none; }
+.theme-light .copilot-card p { color:#667085; }
+.theme-light .copilot-card button { border-color:#d8cce8;background:#f4effa;color:#6f4b9a;box-shadow:none; }
+.theme-light .copilot-card button:hover { border-color:#bca6d7;background:#eee6f7; }
+.theme-light .topbar-popover,.theme-light .search-results { border-color:#d7dee7;background:#fff;box-shadow:0 16px 38px rgba(30,43,62,.13); }
+.theme-light .toast { border-color:#c9d8d1;background:#fff;color:#27624d;box-shadow:0 12px 28px rgba(30,43,62,.14); }
+.theme-light .surface-kicker > em { border-color:#d3dce6;background:#f4f7fa; }
+.theme-light .radar-note,.theme-light .brief-v2-evidence,.theme-light .brief-v2-guardrail,.theme-light .appearance-note-v2,.theme-light .governance-v2 { border-color:#d8e0e8;background:#f8fafc;box-shadow:none; }
+.theme-light :is(.mission-toolbar,.mission-card,.outcome-strip > button,.receipt-list > button,.source-grid-v2 > button,.integration-v2-kpis > span,.security-grid-v2 > span,.preferences-v2-list label,.appearance-options-v2 > button) { border-color:#d9e0e8;background:#f8fafc;box-shadow:none; }
+
+@media (min-width:1201px) and (max-height:780px) {
+  .analysis-grid .secondary-action,.analysis-grid .primary-action { width:auto;height:31px;min-height:31px;margin:0;left:11px;right:11px;bottom:8px;flex-basis:31px;font-size:13px; }
+  .copilot-card p { top:43px;max-width:104px;font-size:12px;line-height:1.4; }
+  .copilot-card button { width:34px;height:34px;right:11px;bottom:11px; }
+}
+
+/* Performance pass: retain the visual hierarchy, but reserve animation work for
+   short entry feedback. Continuous filters, moving particle fields and animated
+   shadows force repeated paint work and made the dashboard feel sluggish. */
+.sidebar::before,.topbar::before,.dashboard::after,.ambient-network::before,.ambient-network::after,.panel::before,.panel::after,.metric-card::before,.metric-orb::before,.card-sheen,.chart-aurora,.chart-particles i,.fiber-wave > i,.fiber-wave > b { animation:none!important; }
+.metric-card { animation:cardEnter .32s cubic-bezier(.2,.8,.2,1) both!important;animation-delay:var(--card-delay)!important;contain:paint; }
+.metric-orb,.metric-orb svg,.sparkline > i,.sparkline > b,.chart-line > i,.chart-value,.funnel-bars i,.prediction i,.primary-action { animation:none!important; }
+.spark-path polyline,.chart-path polyline { animation:lineDraw .48s ease-out both; }
+.panel { animation:none!important;contain:paint; }
+.dashboard > .welcome-row { animation:dashboardEnter .26s cubic-bezier(.2,.8,.2,1) both!important; }
+.dashboard .analysis-grid .panel,.dashboard .operations-grid .panel { animation:dashboardEnter .32s cubic-bezier(.2,.8,.2,1) both!important; }
+.dashboard .analysis-grid .panel:nth-child(1) { animation-delay:.14s!important; }.dashboard .analysis-grid .panel:nth-child(2) { animation-delay:.19s!important; }.dashboard .analysis-grid .panel:nth-child(3) { animation-delay:.24s!important; }
+.dashboard .operations-grid .panel:nth-child(1) { animation-delay:.29s!important; }.dashboard .operations-grid .panel:nth-child(2) { animation-delay:.34s!important; }
+@keyframes dashboardEnter { from { opacity:0;transform:translateY(8px); } to { opacity:1;transform:translateY(0); } }
