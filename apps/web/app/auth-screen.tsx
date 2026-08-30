@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import type { ConfirmationResult, User } from 'firebase/auth';
+import Image from 'next/image';
 import {
   browserLocalPersistence, browserSessionPersistence, createUserWithEmailAndPassword,
   GithubAuthProvider, GoogleAuthProvider, RecaptchaVerifier, sendEmailVerification,
@@ -153,7 +154,7 @@ export function AuthScreen({ theme, user, onThemeChange }: AuthScreenProps) {
 
   return <main className={`auth-page theme-${theme}`} data-theme={theme}>
     <div className="auth-grid" aria-hidden="true" /><div className="auth-orb auth-orb-one" /><div className="auth-orb auth-orb-two" />
-    <header className="auth-topbar"><div className="auth-brand"><i>A</i><strong>A<span>X</span>IOM</strong><em>V1</em></div><div className="auth-theme" role="group" aria-label="Login appearance"><button className={theme === 'light' ? 'active' : ''} onClick={() => onThemeChange('light')} title="Light theme"><Sun /></button><button className={theme === 'dark' ? 'active' : ''} onClick={() => onThemeChange('dark')} title="Dark theme"><Moon /></button><button className={theme === 'neon' ? 'active' : ''} onClick={() => onThemeChange('neon')} title="Neon theme"><Sparkles /></button></div></header>
+    <header className="auth-topbar"><div className="auth-brand"><i><Image src="/brand/axiom-mark-v2-256.png" width={36} height={36} alt="" priority /></i><strong>A<span>X</span>IOM</strong><em>V1</em></div><div className="auth-theme" role="group" aria-label="Login appearance"><button className={theme === 'light' ? 'active' : ''} onClick={() => onThemeChange('light')} title="Light theme"><Sun /></button><button className={theme === 'dark' ? 'active' : ''} onClick={() => onThemeChange('dark')} title="Dark theme"><Moon /></button><button className={theme === 'neon' ? 'active' : ''} onClick={() => onThemeChange('neon')} title="Neon theme"><Sparkles /></button></div></header>
     <section className="auth-experience">
       <aside className="auth-story"><span className="auth-kicker"><Zap /> GOVERNED GROWTH INTELLIGENCE</span><h1>Enter the operating system for <em>decisive growth.</em></h1><p>One secure identity unlocks experiments, causal evidence, recommendations and decision memory.</p><div className="auth-signal"><i><ShieldCheck /></i><span><b>Enterprise-grade identity</b><small>Verified providers · protected workspace · auditable access</small></span></div><div className="auth-proof"><span><b>99.99%</b><small>Identity uptime</small></span><span><b>&lt;1.2s</b><small>Secure entry</small></span><span><b>24/7</b><small>Risk monitoring</small></span></div></aside>
       <article className="auth-card">
