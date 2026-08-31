@@ -1363,7 +1363,8 @@ svg { display: block; }
 /* ─────────────── Theme system: Neon / Dark / Light ─────────────── */
 html[data-theme="light"] { color-scheme:light;background:#edf3fa; }
 html[data-theme="dark"],html[data-theme="neon"] { color-scheme:dark; }
-.app-shell,.app-shell * { transition-property:background-color,border-color,color,box-shadow;transition-duration:.2s;transition-timing-function:ease; }
+.app-shell,
+.app-shell :is(.sidebar,.topbar,.dashboard,.section-page,.panel,.metric-card,.command-surface,.workspace-select,.search,.theme-switcher,.nav-item,.live-status,.copilot-card,.topbar-popover,.search-results,.modal-shell,.copilot-drawer) { transition-property:background-color,border-color,color,box-shadow;transition-duration:.32s;transition-timing-function:cubic-bezier(.2,.8,.2,1); }
 .app-shell.theme-dark { --bg:#070b14;--panel:#0d1524;--text:#f4f7fb;--muted:#aab5c8;--cyan:#3eb8db;--blue:#4b8ee8;--violet:#7668d7;--pink:#e1537f;--green:#32c99d;background:#070b14; }
 .theme-dark .sidebar { background:linear-gradient(180deg,#0a101d,#080d18);border-color:#263851; }.theme-dark .topbar { background:rgba(8,13,23,.97);border-color:#263851; }.theme-dark .dashboard,.theme-dark .section-page.command-page { background:radial-gradient(circle at 50% 0,rgba(56,103,165,.12),transparent 38%),#080d18; }.theme-dark .panel,.theme-dark .metric-card,.theme-dark .command-surface { border-color:#2a405e;background:linear-gradient(145deg,rgba(15,26,44,.98),rgba(9,16,29,.97));box-shadow:0 12px 30px rgba(0,0,0,.2),inset 0 1px rgba(255,255,255,.025); }.theme-dark .command-surface::before,.theme-dark .topbar::before,.theme-dark .sidebar::before { opacity:.12; }.theme-dark .nav-item.active { border-color:#3f93c6;background:linear-gradient(90deg,rgba(40,115,164,.24),rgba(79,67,153,.18));box-shadow:0 0 14px rgba(44,127,184,.14); }
 
@@ -2183,7 +2184,7 @@ html[data-theme="dark"],html[data-theme="neon"] { color-scheme:dark; }
 .auth-universe-particles { position:absolute;z-index:5;inset:-5%;pointer-events:none; }
 .auth-universe-particles i { position:absolute;width:3px;height:3px;border-radius:50%;background:#69eaff;box-shadow:0 0 9px #2fdfff;animation:authParticleRise 4.5s ease-in-out infinite; }
 .auth-universe-particles i:nth-child(1) { left:12%;top:64%; }.auth-universe-particles i:nth-child(2) { left:22%;top:19%;animation-delay:-.7s; }.auth-universe-particles i:nth-child(3) { left:39%;top:8%;animation-delay:-1.4s;background:#d66aff; }.auth-universe-particles i:nth-child(4) { left:72%;top:14%;animation-delay:-2.1s; }.auth-universe-particles i:nth-child(5) { left:89%;top:42%;animation-delay:-2.8s;background:#ed75ff; }.auth-universe-particles i:nth-child(6) { left:82%;top:76%;animation-delay:-3.5s; }.auth-universe-particles i:nth-child(7) { left:59%;top:91%;animation-delay:-.35s;background:#da70ff; }.auth-universe-particles i:nth-child(8) { left:28%;top:87%;animation-delay:-1.05s; }.auth-universe-particles i:nth-child(9) { left:5%;top:43%;animation-delay:-1.75s;background:#d66aff; }.auth-universe-particles i:nth-child(10) { left:52%;top:18%;animation-delay:-2.45s; }
-.auth-universe-visual:hover .auth-universe-stage { animation-play-state:paused;transform:translateY(-3px) rotateX(3deg) rotateY(-5deg) scale(1.035); }
+.auth-universe-visual:hover .auth-universe-stage { animation-play-state:running; }
 .auth-page.theme-neon .auth-universe-image { filter:saturate(1.28) contrast(1.1) brightness(1.08) drop-shadow(0 0 18px rgba(0,225,255,.78)) drop-shadow(0 0 42px rgba(150,68,255,.66))!important; }
 .auth-page.theme-light .auth-universe-stage {
   top:-7px;
@@ -2258,3 +2259,136 @@ html[data-theme="dark"],html[data-theme="neon"] { color-scheme:dark; }
 .theme-light .outcome-strip-label { border-color:#d8e1eb; }.theme-light .outcome-strip > button { border-color:#d6e0ea;background:#f8fafc;color:#60728a; }.theme-light .outcome-strip > button > i { border-color:#b8c8db;background:#fff;color:#4c6988; }.theme-light .outcome-strip > button.active { border-color:#97d9c5;color:#087a58;background:#edf9f4;box-shadow:none; }.theme-light .outcome-strip > button.monitoring.active { border-color:#ecd78c;color:#8a6500;background:#fff9df; }.theme-light .outcome-strip > button.rolled_back.active { border-color:#edb7c8;color:#b4234d;background:#fff1f4; }.theme-light .receipt-list > button { border-color:#dbe3ec;background:#fff; }.theme-light .receipt-marker span { border-color:#aac0d6;color:#294866;background:#eef4fa; }.theme-light .receipt-marker i { background:#c5d5e4; }.theme-light .receipt-list > button > em { border-color:#e7cc75;color:#896100;background:#fff8db; }.theme-light .receipt-list > button.verified > em { border-color:#9bd8c4;color:#087b58;background:#ebf8f2; }.theme-light .receipt-list > button.rolled_back > em { border-color:#eab0c0;color:#b4234d;background:#fff0f3; }.theme-light .decision-proof-v2 { border-color:#c7e5d9;background:linear-gradient(90deg,#effaf5,transparent); }.theme-light .decision-proof-v2 > em { border-color:#a9ddcb;color:#087a58;background:#edf9f4; }
 
 .theme-light .integration-v2-kpis { border-color:#dce4ed; }.theme-light .integration-v2-kpis > span { border-color:#d6e0ea;background:#f8fafc; }.theme-light .pipeline-core { border-color:#a8dfca;background:#effaf5; }.theme-light .pipeline-output { border-color:#a7d8eb;background:#eef8fc; }.theme-light .pipeline-core > i,.theme-light .pipeline-output > svg { color:#098b66;background:#dcf5ea; }.theme-light .source-grid-v2 > button { border-color:#d5e0eb;background:#f8fafc; }.theme-light .source-grid-v2 > button > i { border-color:#b9cade;color:#167ca8;background:#eef7fb; }.theme-light .source-grid-v2 > button > strong,.theme-light .readiness-list em { color:#6248a7;background:#f0ecfb; }.theme-light .readiness-score > div { background:#dfe7f0; }.theme-light .readiness-list > div { border-color:#dce4ec; }.theme-light .readiness-list > div > i { border-color:#b9cade;color:#147ca8;background:#eef7fb; }.theme-light .readiness-list > div.connected > i { border-color:#9ddbc5;color:#087c59;background:#edfaf4;box-shadow:none; }.theme-light .readiness-list > div.connected > em { color:#087c59;background:#edfaf4; }
+
+/* ─────────────── AXIOM motion system ───────────────
+   Short, composited interaction feedback stays separate from the slower
+   ambient layers. This restores the living dashboard without making every
+   hover recalculate layout. */
+.app-shell {
+  --motion-fast:160ms;
+  --motion-medium:280ms;
+  --motion-slow:460ms;
+  --motion-ease:cubic-bezier(.2,.8,.2,1);
+}
+
+html.axiom-theme-changing .app-shell,
+html.axiom-theme-changing .app-shell :is(.sidebar,.topbar,.dashboard,.section-page,.panel,.metric-card,.command-surface,.workspace-select,.search,.theme-switcher,.nav-item,.live-status,.copilot-card,.topbar-popover,.search-results,.modal-shell,.copilot-drawer) {
+  transition-duration:460ms!important;
+}
+
+.app-shell :is(.metric-card,.panel,.command-surface,.mission-card,.radar-metric,.experiment-row,.decision-row,.outcome-strip > button,.receipt-list > button,.source-grid-v2 > button,.readiness-list > div,.gate-matrix > div,.integration-v2-kpis > span,.security-grid-v2 > span,.preferences-v2-list label,.appearance-options-v2 > button,.brief-v2-metrics > span,.mission-data,.pipeline-core,.pipeline-output,.identity-v2-security,.governance-v2,.appearance-note-v2,.radar-note) {
+  transform-origin:center;
+  backface-visibility:hidden;
+  transition:transform var(--motion-medium) var(--motion-ease),border-color var(--motion-medium) ease,box-shadow var(--motion-medium) ease,background-color var(--motion-medium) ease,filter var(--motion-medium) ease;
+}
+
+.app-shell :is(.theme-switcher button,.nav-item,.workspace-select,.search,.notification,.avatar,.growth-panel header button,.primary-action,.secondary-action,.panel-link,.command-action,.mission-filters button,.simulation-switch button,.topbar-popover button,.search-results button,.copilot-card button,.prompt-chip) {
+  transform-origin:center;
+  backface-visibility:hidden;
+  transition:transform var(--motion-fast) var(--motion-ease),border-color var(--motion-medium) ease,box-shadow var(--motion-medium) ease,background-color var(--motion-medium) ease,color var(--motion-fast) ease;
+}
+
+@media (hover:hover) and (pointer:fine) {
+  .app-shell :is(.metric-card,.panel,.command-surface):hover {
+    z-index:4;
+    transform:translate3d(0,-3px,0) scale(1.008);
+  }
+  .app-shell :is(.mission-card,.radar-metric,.experiment-row,.decision-row,.outcome-strip > button,.receipt-list > button,.source-grid-v2 > button,.readiness-list > div,.gate-matrix > div,.integration-v2-kpis > span,.security-grid-v2 > span,.preferences-v2-list label,.appearance-options-v2 > button,.brief-v2-metrics > span,.mission-data,.pipeline-core,.pipeline-output,.identity-v2-security,.governance-v2,.appearance-note-v2,.radar-note):hover {
+    z-index:5;
+    transform:translate3d(0,-3px,0) scale(1.015);
+  }
+  .app-shell :is(.theme-switcher button,.nav-item,.workspace-select,.search,.notification,.avatar,.growth-panel header button,.primary-action,.secondary-action,.panel-link,.command-action,.mission-filters button,.simulation-switch button,.topbar-popover button,.search-results button,.copilot-card button,.prompt-chip):hover {
+    transform:translate3d(0,-2px,0) scale(1.035);
+  }
+  .app-shell :is(button,.nav-item,.workspace-select,.preferences-v2-list label):active {
+    transform:translate3d(0,0,0) scale(.975);
+    transition-duration:80ms;
+  }
+  .app-shell :is(.metric-card,.panel,.command-surface,.mission-card,.radar-metric,.experiment-row,.decision-row,.source-grid-v2 > button,.receipt-list > button):hover :is(svg,.metric-orb,.mission-card-title > i,.receipt-marker > span) {
+    transform:translate3d(0,-1px,0) scale(1.07);
+  }
+}
+
+.app-shell :is(.metric-card,.panel,.command-surface,.mission-card,.radar-metric,.experiment-row,.decision-row,.source-grid-v2 > button,.receipt-list > button) :is(svg,.metric-orb,.mission-card-title > i,.receipt-marker > span) {
+  transition:transform var(--motion-medium) var(--motion-ease),filter var(--motion-medium) ease,box-shadow var(--motion-medium) ease;
+}
+
+.theme-neon :is(.metric-card,.panel,.command-surface):hover {
+  border-color:rgba(var(--panel-rgb,var(--command-accent-rgb,53,210,255)),.82);
+  box-shadow:0 18px 45px rgba(0,0,0,.34),0 0 18px rgba(var(--panel-rgb,var(--command-accent-rgb,53,210,255)),.24),0 0 36px rgba(119,67,255,.12),inset 0 1px rgba(255,255,255,.06);
+}
+.theme-dark :is(.metric-card,.panel,.command-surface):hover { border-color:#465160;box-shadow:0 18px 40px rgba(0,0,0,.72),0 0 16px rgba(78,153,214,.09),inset 0 1px rgba(255,255,255,.05); }
+.theme-light :is(.metric-card,.panel,.command-surface):hover { border-color:#a9bfd7;box-shadow:0 16px 34px rgba(34,61,92,.14),0 0 0 1px rgba(61,151,214,.05),inset 0 1px #fff; }
+.theme-neon :is(.theme-switcher button,.appearance-options-v2 > button):hover { box-shadow:0 0 16px rgba(42,215,255,.22),0 0 28px rgba(129,67,255,.12); }
+.theme-dark :is(.theme-switcher button,.appearance-options-v2 > button):hover { box-shadow:0 8px 18px rgba(0,0,0,.42),0 0 12px rgba(94,153,205,.09); }
+.theme-light :is(.theme-switcher button,.appearance-options-v2 > button):hover { box-shadow:0 9px 20px rgba(35,63,96,.13); }
+
+/* Restore the ambient particle fields at slower, calmer rates. */
+.app-shell .sidebar::before { animation:starDrift 24s linear infinite!important; }
+.app-shell .topbar::before { animation:topbarParticles 30s linear infinite!important; }
+.app-shell .dashboard::after { animation:starDrift 32s linear infinite!important; }
+.app-shell .ambient-network::before { animation:horizonBreath 7.2s ease-in-out infinite!important; }
+.app-shell .ambient-network::after { animation:networkFloat 9s ease-in-out infinite alternate!important; }
+.app-shell .fiber-wave > i { animation:fiberFlow calc(7.4s + var(--i) * .16s) ease-in-out infinite alternate!important;animation-delay:calc(var(--i) * -170ms)!important; }
+.app-shell .fiber-wave > b { animation:particleBlink calc(2.8s + var(--i) * .1s) ease-in-out infinite!important;animation-delay:calc(var(--i) * -110ms)!important; }
+.app-shell .panel.panel::before { animation:panelParticles 24s linear infinite!important; }
+.app-shell .panel::after { animation:panelEdgeRun 7.2s ease-in-out infinite!important; }
+.app-shell .command-surface::before { animation:commandDust 22s linear infinite!important; }
+.app-shell .command-surface::after { animation:commandScan 7.5s ease-in-out infinite alternate!important; }
+.app-shell .metric-card::before { animation:cardSweep 8.8s calc(var(--card-delay) + 1s) ease-in-out infinite!important; }
+.app-shell .card-sheen { animation:borderRun 5.4s ease-in-out infinite!important; }
+.app-shell .metric-orb { animation:orbFloat 4.2s ease-in-out infinite!important; }
+.app-shell .metric-orb::before { animation:orbSpin 7s linear infinite!important; }
+.app-shell .metric-orb svg { animation:iconHover 3.4s ease-in-out infinite!important; }
+
+/* Staggered data motion: paths draw once; points and low-cost particles breathe. */
+.app-shell .spark-path polyline { animation:lineDraw 1.15s .08s ease-out backwards!important; }
+.app-shell .chart-path polyline { animation:lineDraw 1.35s .12s ease-out backwards!important; }
+.app-shell .sparkline > i { animation:pointPulse 3s var(--delay) ease-in-out infinite!important; }
+.app-shell .sparkline > b { animation:particleBlink calc(3s + var(--i) * .065s) ease-in-out infinite!important; }
+.app-shell .chart-bars i { animation:barRise .72s var(--bar-delay) var(--motion-ease) backwards!important; }
+.app-shell .chart-particles i { animation:chartDust calc(4s + var(--i) * .045s) ease-in-out infinite!important;animation-delay:calc(var(--i) * -105ms)!important; }
+.app-shell .chart-line > i { animation:pointPulse 3.1s var(--point-delay) ease-in-out infinite!important; }
+.app-shell .chart-aurora { animation:auroraFlow 7s ease-in-out infinite!important; }
+.app-shell .chart-value { animation:valueFloat 3.8s ease-in-out infinite!important; }
+.app-shell .funnel-bars i { animation:funnelBreath 4.4s ease-in-out infinite!important; }
+.app-shell .prediction i { animation:ringPulse 5.4s ease-in-out infinite!important; }
+.app-shell .primary-action { animation:actionPulse 5.2s ease-in-out infinite!important; }
+
+.app-shell .telemetry-line { stroke-dasharray:400;stroke-dashoffset:400;animation:axiomTelemetryDraw 1.25s .12s var(--motion-ease) forwards; }
+.app-shell .telemetry-stems > i { transform-origin:bottom;animation:axiomTelemetryStem .72s var(--motion-ease) backwards;animation-delay:calc(var(--i,0) * 35ms); }
+.app-shell .telemetry-points > i { animation:axiomTelemetryPoint 3.2s ease-in-out infinite; }
+.app-shell .telemetry-signals > i { animation:axiomTelemetrySignal 4.2s ease-in-out infinite; }
+.app-shell .mission-progress > i b { transform-origin:left;animation:axiomProgressFill .8s .12s var(--motion-ease) backwards; }
+
+/* Route and dashboard entry happens once, then hover remains free to transform. */
+.app-shell .metric-card { animation:cardEnter .44s var(--card-delay) var(--motion-ease) backwards,cardBreath 6.8s calc(var(--card-delay) + .65s) ease-in-out infinite!important; }
+.app-shell .dashboard > .welcome-row { animation:dashboardEnter .38s var(--motion-ease) backwards!important; }
+.app-shell .dashboard .analysis-grid .panel,.app-shell .dashboard .operations-grid .panel { animation:dashboardEnter .48s var(--motion-ease) backwards!important; }
+.app-shell .dashboard .analysis-grid .panel:nth-child(1) { animation-delay:.12s!important; }.app-shell .dashboard .analysis-grid .panel:nth-child(2) { animation-delay:.17s!important; }.app-shell .dashboard .analysis-grid .panel:nth-child(3) { animation-delay:.22s!important; }
+.app-shell .dashboard .operations-grid .panel:nth-child(1) { animation-delay:.27s!important; }.app-shell .dashboard .operations-grid .panel:nth-child(2) { animation-delay:.32s!important; }
+.app-shell .section-page .command-surface { animation:axiomSurfaceReveal .44s var(--motion-ease) backwards!important; }
+.app-shell .section-page .command-surface:nth-child(2) { animation-delay:70ms!important; }
+
+.theme-light .dashboard::after,.theme-light .sidebar::before,.theme-light .topbar::before { opacity:.07!important; }
+.theme-light .panel::before,.theme-light .command-surface::before { opacity:.065!important; }
+.theme-dark .dashboard::after,.theme-dark .sidebar::before,.theme-dark .topbar::before { opacity:.1!important; }
+.theme-dark .panel::before,.theme-dark .command-surface::before { opacity:.1!important; }
+
+@keyframes axiomSurfaceReveal { from { opacity:0;transform:translate3d(0,8px,0) scale(.992); } to { opacity:1;transform:translate3d(0,0,0) scale(1); } }
+@keyframes axiomTelemetryDraw { to { stroke-dashoffset:0; } }
+@keyframes axiomTelemetryStem { from { opacity:0;transform:translateX(-50%) scaleY(0); } to { opacity:1;transform:translateX(-50%) scaleY(1); } }
+@keyframes axiomTelemetryPoint { 0%,100% { opacity:.72;transform:translate(-50%,-50%) scale(.78); } 50% { opacity:1;transform:translate(-50%,-50%) scale(1.18); } }
+@keyframes axiomTelemetrySignal { 0%,100% { opacity:.32;transform:translate(-50%,-50%) translateY(3px) scale(.7); } 50% { opacity:.95;transform:translate(-50%,-50%) translateY(-4px) scale(1.2); } }
+@keyframes axiomProgressFill { from { opacity:.35;transform:scaleX(0); } to { opacity:1;transform:scaleX(1); } }
+
+/* Keep artwork geometry identical on pointer entry; only its existing float runs. */
+.auth-universe-visual:hover .auth-universe-stage { animation-play-state:running!important; }
+
+@media (prefers-reduced-motion:reduce) {
+  html.axiom-theme-changing .app-shell,
+  .app-shell,
+  .app-shell *,
+  .app-shell *::before,
+  .app-shell *::after { animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:60ms!important; }
+}

@@ -565,9 +565,13 @@ export default function Home() {
   };
 
   const selectTheme = (nextTheme: AxiomTheme) => {
+    if (nextTheme === theme) return;
+    const root = document.documentElement;
+    root.classList.add('axiom-theme-changing');
     setTheme(nextTheme);
     window.localStorage.setItem('axiom-theme', nextTheme);
-    document.documentElement.dataset.theme = nextTheme;
+    root.dataset.theme = nextTheme;
+    window.setTimeout(() => root.classList.remove('axiom-theme-changing'), 520);
     notify(`${nextTheme.charAt(0).toUpperCase() + nextTheme.slice(1)} appearance selected`);
   };
 
