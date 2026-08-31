@@ -2438,3 +2438,30 @@ html.axiom-theme-changing .app-shell :is(.sidebar,.topbar,.dashboard,.section-pa
   .app-shell *::before,
   .app-shell *::after { animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:60ms!important; }
 }
+.pwa-install {
+  position:fixed;
+  right:20px;
+  bottom:20px;
+  z-index:1000;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-height:48px;
+  padding:8px 14px 8px 9px;
+  border:1px solid rgba(69,218,255,.55);
+  border-radius:15px;
+  color:#effaff;
+  background:linear-gradient(120deg,rgba(5,28,49,.96),rgba(22,19,65,.96));
+  box-shadow:0 12px 34px rgba(0,0,0,.38),0 0 20px rgba(34,207,255,.2);
+  cursor:pointer;
+  font:inherit;
+  animation:pwaInstallEnter .35s ease-out both;
+}
+.pwa-install span { display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,#19c9ef,#7149ff);box-shadow:0 0 15px rgba(43,210,255,.32); }
+.pwa-install svg { width:18px;height:18px; }
+.pwa-install > svg { color:#42ddff; }
+.pwa-install:hover { transform:translateY(-2px);box-shadow:0 16px 38px rgba(0,0,0,.42),0 0 25px rgba(67,213,255,.3); }
+.pwa-install:active { transform:translateY(0) scale(.98); }
+@keyframes pwaInstallEnter { from { opacity:0;transform:translateY(12px) scale(.96); } to { opacity:1;transform:none; } }
+@media (max-width:700px) { .pwa-install { right:12px;bottom:12px; } }
+@media (prefers-reduced-motion:reduce) { .pwa-install { animation:none;transition:none; } }

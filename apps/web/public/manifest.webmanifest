@@ -1,0 +1,28 @@
+{
+  "name": "AXIOM V1 — Growth Intelligence",
+  "short_name": "AXIOM V1",
+  "description": "Governed growth intelligence and verified experimentation workspace.",
+  "id": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "any",
+  "background_color": "#020711",
+  "theme_color": "#020711",
+  "categories": ["business", "productivity", "analytics"],
+  "icons": [
+    {
+      "src": "/brand/axiom-core-mark-v1-256.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/axiom-core-mark-v1.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

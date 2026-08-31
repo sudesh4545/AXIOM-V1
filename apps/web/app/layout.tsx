@@ -1,9 +1,17 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { PwaInstall } from './pwa-install';
 
 export const metadata: Metadata = {
   title: 'AXIOM — Verified Experimentation OS',
   description: 'Turn business objectives into safe, measurable and verified experiments.',
+  manifest: '/manifest.webmanifest',
+  applicationName: 'AXIOM V1',
+  appleWebApp: {
+    capable: true,
+    title: 'AXIOM V1',
+    statusBarStyle: 'black-translucent',
+  },
   icons: {
     icon: [{ url: '/brand/axiom-core-transparent-v2.png', type: 'image/png', sizes: '1254x1254' }],
     shortcut: ['/brand/axiom-core-transparent-v2.png'],
@@ -23,5 +31,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body>{children}</body></html>;
+  return <html lang="en"><body>{children}<PwaInstall /></body></html>;
 }
