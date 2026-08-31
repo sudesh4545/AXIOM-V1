@@ -43,6 +43,10 @@ type AuthScreenProps = {
 
 function friendlyAuthError(cause: unknown): string {
   const code = cause && typeof cause === 'object' && 'code' in cause ? String(cause.code) : '';
+  const detail = cause instanceof Error ? cause.message : '';
+  if (detail.includes('SMS unable to be sent until this region enabled')) {
+    return 'India (+91) is blocked in Firebase SMS region policy. Enable India, then retry.';
+  }
   const messages: Record<string, string> = {
     'auth/invalid-credential': 'Email or password is incorrect.',
     'auth/email-already-in-use': 'This email already has an AXIOM account. Sign in instead.',
@@ -50,7 +54,7 @@ function friendlyAuthError(cause: unknown): string {
     'auth/weak-password': 'Use at least 8 characters with a number and symbol.',
     'auth/popup-closed-by-user': 'Sign-in window was closed before completion.',
     'auth/popup-blocked': 'Your browser blocked the sign-in window. Allow popups and retry.',
-    'auth/account-exists-with-different-credential': 'This email is already linked to another sign-in method.',
+    'auth/account-exists-with-different-credential': 'This email already uses another provider. Continue with its original Google or GitHub button.',
     'auth/invalid-phone-number': 'Enter a valid phone number with country code.',
     'auth/invalid-verification-code': 'That verification code is incorrect or expired.',
     'auth/too-many-requests': 'Too many attempts. Please wait and try again.',
@@ -154,7 +158,10 @@ export function AuthScreen({ theme, user, onThemeChange }: AuthScreenProps) {
       setConfirmation(result); setMessage('6-digit verification code sent by SMS.');
     } catch (cause) {
       recaptchaRef.current?.clear(); recaptchaRef.current = null;
-      setError(friendlyAuthError(cause));
+      const code = cause && typeof cause === 'object' && 'code' in cause ? String(cause.code) : '';
+      setError(code === 'auth/operation-not-allowed'
+        ? 'India (+91) is blocked in Firebase SMS region policy. Enable India, then retry.'
+        : friendlyAuthError(cause));
     } finally { setLoading(''); }
   };
 
@@ -182,9 +189,9 @@ export function AuthScreen({ theme, user, onThemeChange }: AuthScreenProps) {
 
   return <main className={`auth-page theme-${theme}`} data-theme={theme}>
     <div className="auth-grid" aria-hidden="true" /><div className="auth-orb auth-orb-one" /><div className="auth-orb auth-orb-two" />
-    <header className="auth-topbar"><div className="auth-brand"><i><Image src="/brand/axiom-mark-v2-256.png" width={36} height={36} alt="" priority /></i><strong>A<span>X</span>IOM</strong><em>V1</em></div><div className="auth-theme" role="group" aria-label="Login appearance"><button className={theme === 'light' ? 'active' : ''} onClick={() => onThemeChange('light')} title="Light theme"><Sun /></button><button className={theme === 'dark' ? 'active' : ''} onClick={() => onThemeChange('dark')} title="Dark theme"><Moon /></button><button className={theme === 'neon' ? 'active' : ''} onClick={() => onThemeChange('neon')} title="Neon theme"><Sparkles /></button></div></header>
+    <header className="auth-topbar"><div className="auth-brand"><i><Image src="/brand/axiom-core-mark-v1-256.png" width={36} height={36} alt="" priority /></i><strong>AXIOM</strong><em>V1</em></div><div className="auth-theme" role="group" aria-label="Login appearance"><button className={theme === 'light' ? 'active' : ''} onClick={() => onThemeChange('light')} title="Light theme"><Sun /></button><button className={theme === 'dark' ? 'active' : ''} onClick={() => onThemeChange('dark')} title="Dark theme"><Moon /></button><button className={theme === 'neon' ? 'active' : ''} onClick={() => onThemeChange('neon')} title="Neon theme"><Sparkles /></button></div></header>
     <section className="auth-experience">
-      <aside className="auth-story"><span className="auth-kicker"><Zap /> GOVERNED GROWTH INTELLIGENCE</span><h1><span>Enter the operating</span><span>system for</span><em>decisive growth.</em></h1><p>One secure identity unlocks experiments, causal evidence, recommendations and decision memory.</p><div className="auth-signal"><i><ShieldCheck /></i><span><b>Enterprise-grade identity</b><small>Verified providers · protected workspace · auditable access</small></span></div><div className="auth-proof"><span><b>99.99%</b><small>Identity uptime</small></span><span><b>&lt;1.2s</b><small>Secure entry</small></span><span><b>24/7</b><small>Risk monitoring</small></span></div></aside>
+      <aside className="auth-story"><div className="auth-story-copy"><span className="auth-kicker"><Zap /> GOVERNED GROWTH INTELLIGENCE</span><h1><span>Enter the operating</span><span>system for</span><em>decisive growth.</em></h1><p>One secure identity unlocks experiments, causal evidence, recommendations and decision memory.</p></div><div className="auth-visual" aria-hidden="true"><Image src="/brand/axiom-core-art-v1.webp" alt="" fill sizes="(max-width: 1000px) 0px, 46vw" priority /></div><div className="auth-assurance"><div className="auth-signal"><i><ShieldCheck /></i><span><b>Enterprise-grade identity</b><small>Verified providers · protected workspace · auditable access</small></span></div><div className="auth-proof"><span><b>99.99%</b><small>Identity uptime</small></span><span><b>&lt;1.2s</b><small>Secure entry</small></span><span><b>24/7</b><small>Risk monitoring</small></span></div></div></aside>
       <article className="auth-card">
         {mode !== 'signin' && <button className="auth-back" type="button" onClick={() => { setMode('signin'); setConfirmation(null); resetFeedback(); }}><ArrowLeft /> Back to sign in</button>}
         <div className="auth-heading"><span><Sparkles />{mode === 'signup' ? 'CREATE YOUR IDENTITY' : mode === 'forgot' ? 'ACCOUNT RECOVERY' : mode === 'phone' ? 'PHONE VERIFICATION' : 'SECURE ACCESS'}</span><h2>{mode === 'signup' ? 'Create your AXIOM account' : mode === 'forgot' ? 'Reset your password' : mode === 'phone' ? 'Continue with phone' : 'Welcome back'}</h2><p>{mode === 'signup' ? 'Build a verified workspace identity.' : mode === 'forgot' ? 'We’ll email you a secure recovery link.' : mode === 'phone' ? 'Use a real SMS one-time code.' : 'Authenticate to enter your growth command center.'}</p><i className="auth-heading-flow" aria-hidden="true" /></div>
