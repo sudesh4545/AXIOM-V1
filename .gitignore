@@ -64,3 +64,5 @@ apps/web/.openai/
 
 # Editor-specific local launch settings
 .claude/
+apps/desktop/node_modules/
+apps/desktop/release/

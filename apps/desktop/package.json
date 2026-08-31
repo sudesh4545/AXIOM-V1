@@ -1,0 +1,50 @@
+{
+  "name": "axiom-v1-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "author": "Sudesh Mehar",
+  "description": "AXIOM V1 secure Windows desktop application",
+  "main": "src/main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win nsis"
+  },
+  "devDependencies": {
+    "electron": "38.0.0",
+    "electron-builder": "26.0.12"
+  },
+  "build": {
+    "appId": "com.axiom.v1",
+    "productName": "AXIOM V1",
+    "asar": true,
+    "directories": {
+      "output": "release",
+      "buildResources": "../web/public/brand"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../web/public/brand/axiom-core-mark-v1-256.png",
+        "to": "brand/axiom-icon.png"
+      }
+    ],
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "icon": "axiom-core-mark-v1.png",
+      "artifactName": "AXIOM-V1-Setup-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "AXIOM V1",
+      "deleteAppDataOnUninstall": false
+    }
+  }
+}
