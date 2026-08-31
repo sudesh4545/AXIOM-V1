@@ -61,7 +61,7 @@ export function createBundledDemoOverview(): DashboardResponse {
       { key: 'mrr', label: 'MRR', displayValue: '₹8.4L', rawValue: 840000, unit: 'inr', deltaPct: 12.4, direction: 'up', isImprovement: true, tone: 'cyan', comparisonLabel: 'vs 7d prior', spark: [14,20,17,29,24,39,31,46,41,53] },
       { key: 'activation_rate', label: 'Activation', displayValue: '38.6%', rawValue: 38.6, unit: 'percent', deltaPct: 4.2, direction: 'up', isImprovement: true, tone: 'violet', comparisonLabel: 'vs 7d prior', spark: [12,19,16,28,25,36,30,44,38,53] },
       { key: 'trial_conversion', label: 'Trial Conversion', displayValue: '14.8%', rawValue: 14.8, unit: 'percent', deltaPct: 2.1, direction: 'up', isImprovement: true, tone: 'blue', comparisonLabel: 'vs 7d prior', spark: [10,17,14,26,20,35,29,46,38,55] },
-      { key: 'churn_rate', label: 'Customers Lost', displayValue: '3.2%', rawValue: 3.2, unit: 'percent', deltaPct: -0.6, direction: 'down', isImprovement: true, tone: 'pink', comparisonLabel: 'vs 7d prior', spark: [50,43,46,36,40,30,34,22,26,14] },
+      { key: 'churn_rate', label: 'Attrition', displayValue: '3.2%', rawValue: 3.2, unit: 'percent', deltaPct: -0.6, direction: 'down', isImprovement: true, tone: 'pink', comparisonLabel: 'vs 7d prior', spark: [50,43,46,36,40,30,34,22,26,14] },
     ],
     growth: {
       metricKey: 'mrr', metricLabel: 'MRR', rangeLabel: '30D', unit: 'inr', currentDisplay: '₹8.4L', axisMax: 1_000_000,

@@ -341,7 +341,7 @@ export function computeMeasurement(rows: EventRow[], now = new Date()): Measurem
     { key: 'mrr', label: 'MRR', displayValue: formatInr(currentMrr), rawValue: currentMrr, unit: 'inr', deltaPct: mrrDelta, direction: direction(mrrDelta), isImprovement: mrrDelta >= 0, tone: 'cyan', comparisonLabel: 'vs 7d prior', spark: sparkDates.map((date) => mrrAt(events, date)) },
     { key: 'activation_rate', label: 'Activation', displayValue: `${activationRate}%`, rawValue: activationRate, unit: 'percent', deltaPct: activationDelta, direction: direction(activationDelta), isImprovement: activationDelta >= 0, tone: 'violet', comparisonLabel: 'vs prior 30d', spark: activationSpark },
     { key: 'trial_conversion', label: 'Trial Conversion', displayValue: `${conversionRate}%`, rawValue: conversionRate, unit: 'percent', deltaPct: conversionDelta, direction: direction(conversionDelta), isImprovement: conversionDelta >= 0, tone: 'blue', comparisonLabel: 'vs prior 30d', spark: conversionSpark },
-    { key: 'churn_rate', label: 'Customers Lost', displayValue: `${churnRate}%`, rawValue: churnRate, unit: 'percent', deltaPct: churnDelta, direction: direction(churnDelta), isImprovement: churnDelta <= 0, tone: 'pink', comparisonLabel: 'vs prior 30d', spark: churnSpark },
+    { key: 'churn_rate', label: 'Attrition', displayValue: `${churnRate}%`, rawValue: churnRate, unit: 'percent', deltaPct: churnDelta, direction: direction(churnDelta), isImprovement: churnDelta <= 0, tone: 'pink', comparisonLabel: 'vs prior 30d', spark: churnSpark },
   ];
   const growth: GrowthSeries = {
     metricKey: 'mrr', metricLabel: 'MRR', rangeLabel: '30D', unit: 'inr', currentDisplay: formatInr(currentMrr), axisMax,
