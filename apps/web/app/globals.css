@@ -1803,7 +1803,7 @@ html[data-theme="dark"],html[data-theme="neon"] { color-scheme:dark; }
   .auth-story { min-height:calc(100dvh - 100px);padding:14px 0 12px;display:flex;flex-direction:column;justify-content:space-between; }
   .auth-visual { flex:1;min-height:190px;max-height:285px;margin:12px 0; }
   .auth-assurance { padding-bottom:2px; }
-  .auth-card { min-height:calc(100dvh - 100px);align-self:stretch;max-height:none;display:flex;flex-direction:column;justify-content:space-around; }
+  .auth-card { min-height:calc(100dvh - 100px);align-self:stretch;max-height:none;display:flex;flex-direction:column;justify-content:space-evenly; }
   .auth-card .oauth-grid,.auth-card .phone-entry,.auth-card .auth-divider,.auth-card .auth-switch,.auth-card .auth-message,.auth-card footer { margin-top:0; }
   .auth-card footer { font-size:12px; }
 }
