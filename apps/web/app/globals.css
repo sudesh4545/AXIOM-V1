@@ -2464,4 +2464,29 @@ html.axiom-theme-changing .app-shell :is(.sidebar,.topbar,.dashboard,.section-pa
 .pwa-install:active { transform:translateY(0) scale(.98); }
 @keyframes pwaInstallEnter { from { opacity:0;transform:translateY(12px) scale(.96); } to { opacity:1;transform:none; } }
 @media (max-width:700px) { .pwa-install { right:12px;bottom:12px; } }
+
+/* Mobile layout lock: keep the app viewport stable and prevent desktop grid
+   constraints/hover transforms from leaking into the touch layout. */
+@media (max-width:760px) {
+  html, body { width:100%; min-width:0; max-width:100%; overflow-x:hidden; }
+  .app-shell { width:100%; min-width:0; max-width:100%; overflow-x:hidden; }
+  .workspace { width:100%; min-width:0; max-width:100%; overflow-x:hidden; }
+  .topbar { position:sticky; top:0; z-index:40; width:100%; min-width:0; }
+  .dashboard, .section-page, .section-page.command-page { width:100%; min-width:0; max-width:100%; overflow-x:hidden; }
+  .dashboard > *, .section-page > *, .command-page > *,
+  .metric-grid, .analysis-grid, .operations-grid, .section-two-column,
+  .analytics-grid, .integration-grid, .intel-v2-layout, .integration-v2-layout,
+  .decision-v2-content, .settings-v2-content { min-width:0; max-width:100%; }
+  .panel, .metric-card, .command-surface, .section-card, .mission-card { min-width:0; max-width:100%; overflow:hidden; }
+  .panel > header, .command-surface > header, .section-card > header { min-width:0; }
+  .panel h2, .panel h3, .command-surface h2, .command-surface h3,
+  .mission-card-title h2, .section-page-header h1 { overflow-wrap:anywhere; }
+  .telemetry-plot, .analytics-chart-card, .growth-panel { min-width:0; max-width:100%; }
+  .telemetry-plot > svg, .analytics-line { max-width:100%; }
+  .sidebar { position:fixed; isolation:isolate; padding-bottom:calc(7px + env(safe-area-inset-bottom)); height:calc(69px + env(safe-area-inset-bottom)); }
+  .sidebar nav { position:relative; z-index:2; }
+  .nav-item, .nav-item:hover, .nav-item:active { transform:none!important; }
+  .app-shell :is(.metric-card,.panel,.command-surface,.mission-card,.nav-item):hover { transform:none; }
+  .app-shell :is(.metric-card,.panel,.command-surface,.mission-card) { transition:background-color .22s ease,border-color .22s ease,box-shadow .22s ease; }
+}
 @media (prefers-reduced-motion:reduce) { .pwa-install { animation:none;transition:none; } }
