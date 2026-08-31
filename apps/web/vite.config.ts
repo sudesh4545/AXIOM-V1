@@ -12,10 +12,10 @@ const { d1, r2 } = hostingConfig;
 const isConstrainedDevelopmentEnvironment = process.env.AXIOM_CONSTRAINED_DEV === 'true';
 const isCloudflareDeploymentBuild = process.env.AXIOM_CLOUDFLARE_DEPLOY === 'true';
 
-const localBindingConfig = {
+const localBindingConfig = (isServe: boolean) => ({
   main: 'vinext/server/app-router-entry',
   compatibility_flags: ['nodejs_compat'],
-  d1_databases: d1 && !isCloudflareDeploymentBuild
+  d1_databases: d1 && isServe && !isCloudflareDeploymentBuild
     ? [
         {
           binding: d1,
@@ -24,7 +24,7 @@ const localBindingConfig = {
         },
       ]
     : [],
-  r2_buckets: r2 && !isCloudflareDeploymentBuild
+  r2_buckets: r2 && isServe && !isCloudflareDeploymentBuild
     ? [
         {
           binding: r2,
@@ -32,9 +32,9 @@ const localBindingConfig = {
         },
       ]
     : [],
-};
+});
 
-export default defineConfig(async () => {
+export default defineConfig(async ({ command }) => {
   // Keep Wrangler and Miniflare state project-local. These are non-secret tool
   // settings; application environment belongs in ignored `.env*` files.
   process.env.WRANGLER_WRITE_LOGS ??= 'false';
@@ -53,7 +53,7 @@ export default defineConfig(async () => {
       vinext(),
       cloudflare({
         viteEnvironment: { name: 'rsc', childEnvironments: ['ssr'] },
-        config: localBindingConfig,
+        config: localBindingConfig(command === 'serve'),
       }),
     ],
   };
