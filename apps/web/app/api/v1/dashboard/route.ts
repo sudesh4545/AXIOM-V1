@@ -59,6 +59,12 @@ async function attachRuntimeState(row: SnapshotRow, identity: RequestIdentity, a
     loadIngestionSummary(access.active.id),
     applyWorkspaceMeasurement(payload, access.active.id),
   ]);
+  // Existing workspaces can retain older presentation labels inside their
+  // persisted dashboard snapshot. Keep the stable metric key, but normalize
+  // its user-facing name every time the dashboard response is assembled.
+  payload.metrics = payload.metrics.map((metric) => metric.key === 'churn_rate'
+    ? { ...metric, label: 'Attrition' }
+    : metric);
   payload.ingestion = ingestion;
   payload.opportunities ??= rankOpportunities(payload.bottleneck, payload.measurement?.observedUsers ?? 0);
   await syncApprovedExperimentDelivery(payload, access.active.id);
