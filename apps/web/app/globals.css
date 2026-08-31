@@ -2273,7 +2273,7 @@ html[data-theme="dark"],html[data-theme="neon"] { color-scheme:dark; }
 
 html.axiom-theme-changing .app-shell,
 html.axiom-theme-changing .app-shell :is(.sidebar,.topbar,.dashboard,.section-page,.panel,.metric-card,.command-surface,.workspace-select,.search,.theme-switcher,.nav-item,.live-status,.copilot-card,.topbar-popover,.search-results,.modal-shell,.copilot-drawer) {
-  transition-duration:460ms!important;
+  transition-duration:260ms!important;
 }
 
 .app-shell :is(.metric-card,.panel,.command-surface,.mission-card,.radar-metric,.experiment-row,.decision-row,.outcome-strip > button,.receipt-list > button,.source-grid-v2 > button,.readiness-list > div,.gate-matrix > div,.integration-v2-kpis > span,.security-grid-v2 > span,.preferences-v2-list label,.appearance-options-v2 > button,.brief-v2-metrics > span,.mission-data,.pipeline-core,.pipeline-output,.identity-v2-security,.governance-v2,.appearance-note-v2,.radar-note) {
@@ -2323,17 +2323,23 @@ html.axiom-theme-changing .app-shell :is(.sidebar,.topbar,.dashboard,.section-pa
 .theme-dark :is(.theme-switcher button,.appearance-options-v2 > button):hover { box-shadow:0 8px 18px rgba(0,0,0,.42),0 0 12px rgba(94,153,205,.09); }
 .theme-light :is(.theme-switcher button,.appearance-options-v2 > button):hover { box-shadow:0 9px 20px rgba(35,63,96,.13); }
 
-/* Restore the ambient particle fields at slower, calmer rates. */
-.app-shell .sidebar::before { animation:starDrift 24s linear infinite!important; }
-.app-shell .topbar::before { animation:topbarParticles 30s linear infinite!important; }
-.app-shell .dashboard::after { animation:starDrift 32s linear infinite!important; }
+/* Restore the ambient particle fields as composited layers. Moving the layer
+   itself avoids repainting a full-screen background on every frame. */
+.app-shell .sidebar::before,.app-shell .topbar::before,.app-shell .dashboard::after {
+  inset:-20px;
+  will-change:transform;
+  animation:axiomAmbientLayer 22s ease-in-out infinite alternate!important;
+}
 .app-shell .ambient-network::before { animation:horizonBreath 7.2s ease-in-out infinite!important; }
 .app-shell .ambient-network::after { animation:networkFloat 9s ease-in-out infinite alternate!important; }
 .app-shell .fiber-wave > i { animation:fiberFlow calc(7.4s + var(--i) * .16s) ease-in-out infinite alternate!important;animation-delay:calc(var(--i) * -170ms)!important; }
 .app-shell .fiber-wave > b { animation:particleBlink calc(2.8s + var(--i) * .1s) ease-in-out infinite!important;animation-delay:calc(var(--i) * -110ms)!important; }
-.app-shell .panel.panel::before { animation:panelParticles 24s linear infinite!important; }
+.app-shell .panel.panel::before,.app-shell .command-surface::before {
+  inset:-12px;
+  will-change:transform;
+  animation:axiomPanelParticles 18s ease-in-out infinite alternate!important;
+}
 .app-shell .panel::after { animation:panelEdgeRun 7.2s ease-in-out infinite!important; }
-.app-shell .command-surface::before { animation:commandDust 22s linear infinite!important; }
 .app-shell .command-surface::after { animation:commandScan 7.5s ease-in-out infinite alternate!important; }
 .app-shell .metric-card::before { animation:cardSweep 8.8s calc(var(--card-delay) + 1s) ease-in-out infinite!important; }
 .app-shell .card-sheen { animation:borderRun 5.4s ease-in-out infinite!important; }
@@ -2353,7 +2359,7 @@ html.axiom-theme-changing .app-shell :is(.sidebar,.topbar,.dashboard,.section-pa
 .app-shell .chart-value { animation:valueFloat 3.8s ease-in-out infinite!important; }
 .app-shell .funnel-bars i { animation:funnelBreath 4.4s ease-in-out infinite!important; }
 .app-shell .prediction i { animation:ringPulse 5.4s ease-in-out infinite!important; }
-.app-shell .primary-action { animation:actionPulse 5.2s ease-in-out infinite!important; }
+.app-shell .primary-action { animation:none!important; }
 
 .app-shell .telemetry-line { stroke-dasharray:400;stroke-dashoffset:400;animation:axiomTelemetryDraw 1.25s .12s var(--motion-ease) forwards; }
 .app-shell .telemetry-stems > i { transform-origin:bottom;animation:axiomTelemetryStem .72s var(--motion-ease) backwards;animation-delay:calc(var(--i,0) * 35ms); }
@@ -2361,14 +2367,17 @@ html.axiom-theme-changing .app-shell :is(.sidebar,.topbar,.dashboard,.section-pa
 .app-shell .telemetry-signals > i { animation:axiomTelemetrySignal 4.2s ease-in-out infinite; }
 .app-shell .mission-progress > i b { transform-origin:left;animation:axiomProgressFill .8s .12s var(--motion-ease) backwards; }
 
-/* Route and dashboard entry happens once, then hover remains free to transform. */
-.app-shell .metric-card { animation:cardEnter .44s var(--card-delay) var(--motion-ease) backwards,cardBreath 6.8s calc(var(--card-delay) + .65s) ease-in-out infinite!important; }
-.app-shell .dashboard > .welcome-row { animation:dashboardEnter .38s var(--motion-ease) backwards!important; }
-.app-shell .dashboard .analysis-grid .panel,.app-shell .dashboard .operations-grid .panel { animation:dashboardEnter .48s var(--motion-ease) backwards!important; }
-.app-shell .dashboard .analysis-grid .panel:nth-child(1) { animation-delay:.12s!important; }.app-shell .dashboard .analysis-grid .panel:nth-child(2) { animation-delay:.17s!important; }.app-shell .dashboard .analysis-grid .panel:nth-child(3) { animation-delay:.22s!important; }
-.app-shell .dashboard .operations-grid .panel:nth-child(1) { animation-delay:.27s!important; }.app-shell .dashboard .operations-grid .panel:nth-child(2) { animation-delay:.32s!important; }
-.app-shell .section-page .command-surface { animation:axiomSurfaceReveal .44s var(--motion-ease) backwards!important; }
-.app-shell .section-page .command-surface:nth-child(2) { animation-delay:70ms!important; }
+/* Short route entries provide direction without holding interaction hostage. */
+.app-shell .section-page { animation:axiomViewEnter .24s var(--motion-ease) backwards!important; }
+.app-shell .metric-card { animation:cardEnter .28s var(--card-delay) var(--motion-ease) backwards!important; }
+.app-shell .dashboard > .welcome-row { animation:axiomViewEnter .2s var(--motion-ease) backwards!important; }
+.app-shell .dashboard .analysis-grid .growth-panel { animation:axiomOverviewLeft .28s var(--motion-ease) backwards!important; }
+.app-shell .dashboard .analysis-grid .bottleneck-panel { animation:axiomOverviewRight .32s .025s var(--motion-ease) backwards!important; }
+.app-shell .dashboard .analysis-grid .recommendation-panel { animation:axiomOverviewRight .34s .055s var(--motion-ease) backwards!important; }
+.app-shell .dashboard .operations-grid .panel { animation:axiomOverviewUp .28s .07s var(--motion-ease) backwards!important; }
+.app-shell .dashboard .operations-grid .panel:nth-child(2) { animation-delay:.1s!important; }
+.app-shell .section-page .command-surface { animation:axiomSurfaceReveal .26s var(--motion-ease) backwards!important; }
+.app-shell .section-page .command-surface:nth-child(2) { animation-delay:35ms!important; }
 
 .theme-light .dashboard::after,.theme-light .sidebar::before,.theme-light .topbar::before { opacity:.07!important; }
 .theme-light .panel::before,.theme-light .command-surface::before { opacity:.065!important; }
@@ -2376,6 +2385,12 @@ html.axiom-theme-changing .app-shell :is(.sidebar,.topbar,.dashboard,.section-pa
 .theme-dark .panel::before,.theme-dark .command-surface::before { opacity:.1!important; }
 
 @keyframes axiomSurfaceReveal { from { opacity:0;transform:translate3d(0,8px,0) scale(.992); } to { opacity:1;transform:translate3d(0,0,0) scale(1); } }
+@keyframes axiomViewEnter { from { opacity:.35;transform:translate3d(0,5px,0); } to { opacity:1;transform:translate3d(0,0,0); } }
+@keyframes axiomOverviewLeft { from { opacity:.2;transform:translate3d(-24px,0,0) scale(.992); } to { opacity:1;transform:translate3d(0,0,0) scale(1); } }
+@keyframes axiomOverviewRight { from { opacity:.15;transform:translate3d(34px,0,0) scale(.988); } to { opacity:1;transform:translate3d(0,0,0) scale(1); } }
+@keyframes axiomOverviewUp { from { opacity:.2;transform:translate3d(0,14px,0); } to { opacity:1;transform:translate3d(0,0,0); } }
+@keyframes axiomAmbientLayer { from { transform:translate3d(-5px,-3px,0); } to { transform:translate3d(7px,5px,0); } }
+@keyframes axiomPanelParticles { from { transform:translate3d(-4px,-3px,0);opacity:.72; } to { transform:translate3d(6px,4px,0);opacity:1; } }
 @keyframes axiomTelemetryDraw { to { stroke-dashoffset:0; } }
 @keyframes axiomTelemetryStem { from { opacity:0;transform:translateX(-50%) scaleY(0); } to { opacity:1;transform:translateX(-50%) scaleY(1); } }
 @keyframes axiomTelemetryPoint { 0%,100% { opacity:.72;transform:translate(-50%,-50%) scale(.78); } 50% { opacity:1;transform:translate(-50%,-50%) scale(1.18); } }
@@ -2384,6 +2399,33 @@ html.axiom-theme-changing .app-shell :is(.sidebar,.topbar,.dashboard,.section-pa
 
 /* Keep artwork geometry identical on pointer entry; only its existing float runs. */
 .auth-universe-visual:hover .auth-universe-stage { animation-play-state:running!important; }
+
+/* Analytics graph: compact Overview-style composition with the metric radar
+   kept in the same viewport. */
+.analytics-command .telemetry-layout { min-height:0;grid-template-columns:minmax(0,1.48fr) minmax(300px,.78fr);gap:12px; }
+.analytics-command .telemetry-canvas { position:relative;grid-template-rows:56px minmax(0,1fr) 34px;padding-bottom:8px; }
+.analytics-command .telemetry-kicker { height:56px; }
+.analytics-command .telemetry-kicker > span { gap:9px;font-size:18px; }
+.analytics-command .telemetry-kicker > span > svg:last-child { width:17px;color:#8fa0ba; }
+.telemetry-controls { display:flex;align-items:center;gap:8px; }
+.telemetry-controls > span { height:36px;padding:0 11px;display:flex;align-items:center;gap:7px;border:1px solid #304468;border-radius:9px;color:#e8f4ff;background:#07132b;font-size:13px;font-weight:700; }
+.telemetry-controls svg { width:14px; }
+.analytics-command .telemetry-value { position:absolute;z-index:5;right:22px;top:72px;padding:0;pointer-events:none; }
+.analytics-command .telemetry-value small,.analytics-command .telemetry-value > b { display:none; }
+.analytics-command .telemetry-value strong { margin:0;padding:7px 12px;border:1px solid #63e9ff;border-radius:8px;color:#001021;background:linear-gradient(135deg,#66e8ff,#38c7f0);box-shadow:inset 0 0 9px rgba(255,255,255,.58),0 0 15px rgba(36,207,255,.5);font-size:18px; }
+.analytics-command .telemetry-plot { grid-row:2;min-height:0;margin:16px 22px 0 70px;overflow:visible; }
+.analytics-command .telemetry-axis { left:-54px;flex-direction:column;align-items:flex-end;font-size:13px; }
+.analytics-command .telemetry-dates { grid-row:3;min-height:34px;padding:8px 22px 0 70px;font-size:13px; }
+.analytics-command .telemetry-line { stroke-width:2.2;filter:drop-shadow(0 0 3px #3fe4ff); }
+.analytics-command .telemetry-area { opacity:.95; }
+.analytics-command .metric-radar { min-width:0; }
+.theme-light .telemetry-controls > span { border-color:#bdcadb;color:#314661;background:#eef3f9; }
+.theme-light .analytics-command .telemetry-value strong { border-color:#62b9d4;color:#12324b;background:linear-gradient(135deg,#d7f6ff,#aee8f7);box-shadow:0 7px 18px rgba(39,126,166,.2); }
+
+@media (max-width:1050px) {
+  .analytics-command .telemetry-layout { grid-template-columns:1fr; }
+  .analytics-command .telemetry-canvas { min-height:430px; }
+}
 
 @media (prefers-reduced-motion:reduce) {
   html.axiom-theme-changing .app-shell,

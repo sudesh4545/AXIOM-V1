@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
 import {
@@ -147,8 +147,8 @@ function Brand() {
 function FiberWave({ className = '' }: { className?: string }) {
   return (
     <div className={`fiber-wave ${className}`} aria-hidden="true">
-      {Array.from({ length: 20 }, (_, index) => <i key={index} style={{ '--i': index } as CSSProperties} />)}
-      {Array.from({ length: 18 }, (_, index) => <b key={index} style={{ '--i': index } as CSSProperties} />)}
+      {Array.from({ length: 10 }, (_, index) => <i key={index} style={{ '--i': index } as CSSProperties} />)}
+      {Array.from({ length: 8 }, (_, index) => <b key={index} style={{ '--i': index } as CSSProperties} />)}
     </div>
   );
 }
@@ -208,7 +208,7 @@ function Sparkline({ tone, points }: { tone: Tone; points: number[] }) {
       {scaled.map((height, index) => (
         <i key={index} style={{ left: `${index * step}%`, bottom: `${height}%`, '--delay': `${index * 70}ms` } as CSSProperties} />
       ))}
-      {Array.from({ length: 14 }, (_, index) => <b key={index} style={{ '--i': index } as CSSProperties} />)}
+      {Array.from({ length: 8 }, (_, index) => <b key={index} style={{ '--i': index } as CSSProperties} />)}
     </div>
   );
 }
@@ -249,7 +249,7 @@ function GrowthChart({ growth }: { growth: GrowthSeries }) {
       <div className="chart-grid" /><div className="chart-aurora" />
       <div className="axis-values">{growth.axisLabels.map((label) => <span key={label}>{label}</span>)}</div>
       <div className="chart-bars" aria-hidden="true">{heights.map((height, index) => <i key={index} style={{ height: `${height}%`, '--bar-delay': `${index * 45}ms` } as CSSProperties} />)}</div>
-      <div className="chart-particles" aria-hidden="true">{Array.from({ length: 52 }, (_, index) => <i key={index} style={{ '--i': index } as CSSProperties} />)}</div>
+      <div className="chart-particles" aria-hidden="true">{Array.from({ length: 22 }, (_, index) => <i key={index} style={{ '--i': index } as CSSProperties} />)}</div>
       <div className="chart-line" aria-hidden="true">
         {/* Wahi SVG approach jo Sparkline mein hai — yahan bug zyada dikh raha tha
             kyunki chart bada hai. `--segment-length` `vh` mein tha aur `* .55`
@@ -312,6 +312,11 @@ function DecisionRow({ decision, onSelect }: { decision: DecisionReceiptSummary;
     </button>
   );
 }
+
+const StableFiberWave = memo(FiberWave);
+const StableMetricCard = memo(MetricCard);
+const StableGrowthChart = memo(GrowthChart);
+const StableFunnelBars = memo(FunnelBars);
 
 function ExperimentDetailModal({ experiment, onClose, onAnalyze, onControl, saving }: { experiment: ActiveExperiment; onClose: () => void; onAnalyze: () => void; onControl: (action: 'pause' | 'resume' | 'rollback') => void; saving: boolean }) {
   return (
@@ -410,7 +415,7 @@ function ReviewModal({
 function StatusShell({ title, message, hint }: { title: string; message: string; hint?: string }) {
   return (
     <main className="app-shell">
-      <aside className="sidebar"><Brand /><FiberWave className="sidebar-wave" /></aside>
+      <aside className="sidebar"><Brand /><StableFiberWave className="sidebar-wave" /></aside>
       <section className="workspace">
         <div className="dashboard">
           <section className="welcome-row"><div><h1>{title}</h1><p>{message}</p></div></section>
@@ -434,7 +439,6 @@ export default function Home() {
   const [copilotReply, setCopilotReply] = useState('');
   const [copilotLoading, setCopilotLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [spotlight, setSpotlight] = useState('');
   const [topbarMenu, setTopbarMenu] = useState<'workspace' | 'notifications' | 'profile' | null>(null);
   const [selectedExperiment, setSelectedExperiment] = useState<ActiveExperiment | null>(null);
   const [selectedDecision, setSelectedDecision] = useState<DecisionReceiptSummary | null>(null);
@@ -449,6 +453,11 @@ export default function Home() {
   const authEligible = Boolean(authUser && (!authUser.providerData.some((provider) => provider.providerId === 'password') || authUser.emailVerified));
 
   useEffect(() => onAuthStateChanged(firebaseAuth, (nextUser) => {
+    const eligible = Boolean(nextUser && (!nextUser.providerData.some((provider) => provider.providerId === 'password') || nextUser.emailVerified));
+    if (nextUser && eligible) {
+      const cached = readCachedOverview(nextUser.uid);
+      if (cached) setData(cached);
+    }
     setAuthUser(nextUser);
     setAuthReady(true);
     if (!nextUser) setData(null);
@@ -499,15 +508,6 @@ export default function Home() {
 
   useEffect(() => {
     if (!authUser || !authEligible) return;
-    const frame = window.requestAnimationFrame(() => {
-      const cached = readCachedOverview(authUser.uid);
-      if (cached) setData(cached);
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [authEligible, authUser]);
-
-  useEffect(() => {
-    if (!authUser || !authEligible) return;
     // `cancelled` flag isliye: component unmount hone ke baad `setState` call
     // karna React warning deta hai aur memory leak ka signal hai. React ke
     // StrictMode dev double-mount mein bhi yeh pehli fetch ko ignore kara deta.
@@ -540,7 +540,6 @@ export default function Home() {
   const activateSection = useCallback((label: string) => {
     const targetId = NAV_TARGET_IDS[label];
     setActiveNav(label);
-    setSpotlight(targetId);
     setSearchQuery('');
     setTopbarMenu(null);
     const nextUrl = new URL(window.location.href);
@@ -550,11 +549,9 @@ export default function Home() {
     window.requestAnimationFrame(() => {
       const target = document.getElementById(targetId);
       target?.focus({ preventScroll: true });
-      if (window.innerWidth <= 1200) target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (window.innerWidth <= 1200) target?.scrollIntoView({ behavior: 'auto', block: 'start' });
     });
-    window.setTimeout(() => setSpotlight((current) => current === targetId ? '' : current), 1600);
-    notify(`${label} workspace selected`);
-  }, [notify]);
+  }, []);
 
   const toggleSidebar = () => {
     setSidebarCollapsed((current) => {
@@ -564,16 +561,19 @@ export default function Home() {
     });
   };
 
-  const selectTheme = (nextTheme: AxiomTheme) => {
+  const selectTheme = useCallback((nextTheme: AxiomTheme) => {
     if (nextTheme === theme) return;
     const root = document.documentElement;
     root.classList.add('axiom-theme-changing');
     setTheme(nextTheme);
     window.localStorage.setItem('axiom-theme', nextTheme);
     root.dataset.theme = nextTheme;
-    window.setTimeout(() => root.classList.remove('axiom-theme-changing'), 520);
+    window.setTimeout(() => root.classList.remove('axiom-theme-changing'), 300);
     notify(`${nextTheme.charAt(0).toUpperCase() + nextTheme.slice(1)} appearance selected`);
-  };
+  }, [notify, theme]);
+
+  const openCopilot = useCallback((message: string) => { setCopilotReply(message); setCopilotOpen(true); }, []);
+  const openReview = useCallback(() => setReviewOpen(true), []);
 
   const logout = async () => {
     if (authUser) window.localStorage.removeItem(`${DASHBOARD_CACHE_KEY}:${authUser.uid}`);
@@ -665,14 +665,14 @@ export default function Home() {
             <button onClick={() => activateSection(label)} aria-current={activeNav === label ? 'page' : undefined} className={activeNav === label ? 'nav-item active' : 'nav-item'} key={label} type="button"><i><Icon strokeWidth={1.8} /></i><span>{label}</span></button>
           ))}
         </nav>
-        <FiberWave className="sidebar-wave" />
+        <StableFiberWave className="sidebar-wave" />
         <div className="copilot-card"><strong><Sparkles /> AXIOM AI</strong><p>Ask questions or analyze evidence.</p><button onClick={() => setCopilotOpen(true)} type="button" aria-label="Open AXIOM AI"><Sparkles /></button></div>
         <button className="collapse" type="button" aria-pressed={sidebarCollapsed} onClick={toggleSidebar}><span className="collapse-icon"><ArrowLeft /></span><span>{sidebarCollapsed ? 'Expand' : 'Collapse'}</span></button>
       </aside>
 
       <section className="workspace">
         <header className="topbar">
-          <button id="workspace-button" onClick={() => setTopbarMenu((current) => current === 'workspace' ? null : 'workspace')} className={`workspace-select${spotlight === 'workspace-button' ? ' spotlight' : ''}`} type="button" aria-expanded={topbarMenu === 'workspace'}><Building2 /> {workspace.name} <ChevronDown /></button>
+          <button id="workspace-button" onClick={() => setTopbarMenu((current) => current === 'workspace' ? null : 'workspace')} className="workspace-select" type="button" aria-expanded={topbarMenu === 'workspace'}><Building2 /> {workspace.name} <ChevronDown /></button>
           <div className="search-shell">
             <label className="search"><Search /><input ref={searchRef} value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && searchResults[0]) { event.preventDefault(); activateSection(searchResults[0].nav); } }} aria-label="Search" placeholder="Search metrics, experiments, insights..." /><kbd>⌘ K</kbd></label>
             {normalizedSearch && (
@@ -691,15 +691,15 @@ export default function Home() {
             <button type="button" className={theme === 'neon' ? 'active' : ''} aria-pressed={theme === 'neon'} onClick={() => selectTheme('neon')} title="Neon mode"><Sparkles /><span>Neon</span></button>
           </div>
           <button onClick={() => setTopbarMenu((current) => current === 'notifications' ? null : 'notifications')} className="notification" aria-label="Notifications" aria-expanded={topbarMenu === 'notifications'} type="button"><Bell /><b>3</b></button>
-          <button id="profile-button" className={`avatar${spotlight === 'profile-button' ? ' spotlight' : ''}`} type="button" aria-label="Profile" aria-expanded={topbarMenu === 'profile'} onClick={() => setTopbarMenu((current) => current === 'profile' ? null : 'profile')}><img src="/brand/axiom-core-mark-v1-256.png" width="49" height="49" alt="" /></button>
+          <button id="profile-button" className="avatar" type="button" aria-label="Profile" aria-expanded={topbarMenu === 'profile'} onClick={() => setTopbarMenu((current) => current === 'profile' ? null : 'profile')}><img src="/brand/axiom-core-mark-v1-256.png" width="49" height="49" alt="" /></button>
 
           {topbarMenu === 'workspace' && <div className="topbar-popover workspace-popover"><small>{data.workspaceContext ? `${humanise(data.workspaceContext.role)} · ${data.workspaceContext.name}` : 'ACTIVE WORKSPACE'}</small><strong>{workspace.name}</strong><p>{workspace.objective ?? workspace.organizationName}</p><div className="workspace-options" role="list" aria-label="Available workspaces">{availableWorkspaces.map((option) => <button key={option.id} type="button" className={option.id === workspace.id ? 'active' : ''} disabled={workspaceSwitching} onClick={() => changeWorkspace(option.id)}><Building2 /><span><b>{option.name}</b><em>{humanise(option.environment)}</em></span>{option.id === workspace.id ? <CircleCheckBig /> : <ArrowRight />}</button>)}</div><button type="button" onClick={() => { setTopbarMenu(null); notify(data.dataSourceNote); }}><CircleCheckBig /> {systemStatus.message}</button></div>}
           {topbarMenu === 'notifications' && <div className="topbar-popover notifications-popover"><small>3 SYSTEM UPDATES</small><button type="button" onClick={() => { setTopbarMenu(null); notify(data.dataSourceNote); }}><CircleCheckBig /><span><b>{systemStatus.label}</b><em>{systemStatus.message}</em></span></button><button type="button" onClick={() => activateSection('Intelligence')}><CircleAlert /><span><b>{bottleneck.stage}</b><em>{humanise(bottleneck.severity)} severity bottleneck</em></span></button><button type="button" onClick={() => activateSection('Simulations')}><Sparkles /><span><b>New recommendation</b><em>{recommendation.title}</em></span></button></div>}
           {topbarMenu === 'profile' && <div className="topbar-popover profile-popover"><div className="profile-summary"><span><img src="/brand/axiom-core-mark-v1-256.png" width="42" height="42" alt="" /></span><p><strong>{data.session?.displayName ?? data.operatorFirstName}</strong><small>{data.session?.email ?? 'AXIOM operator'}</small></p></div><button type="button" onClick={() => activateSection('Settings')}><Settings /> Workspace settings</button><button type="button" onClick={() => { setTopbarMenu(null); setCopilotOpen(true); }}><Sparkles /> Open AXIOM AI</button><button type="button" onClick={logout}><LogOut /> Log out</button><em>{workspace.name} · {humanise(workspace.environment)} · {data.storage ? `saved r${data.storage.revision}` : 'connected'}</em></div>}
         </header>
 
-        {activeNav === 'Overview' ? <div id="dashboard-overview" tabIndex={-1} className={`dashboard${spotlight === 'dashboard-overview' ? ' spotlight' : ''}`}>
-          <div className="ambient-network" aria-hidden="true"><FiberWave className="horizon-wave" /></div>
+        {activeNav === 'Overview' ? <div id="dashboard-overview" tabIndex={-1} className="dashboard">
+          <div className="ambient-network" aria-hidden="true"><StableFiberWave className="horizon-wave" /></div>
           <section className="welcome-row">
             <div>
               <h1>{greeting()}, {data.operatorFirstName} <span>👋</span></h1>
@@ -715,21 +715,21 @@ export default function Home() {
             </button>
           </section>
 
-          <section className="metric-grid" aria-label="Key metrics">{metrics.map((metric, index) => <MetricCard metric={metric} index={index} key={metric.key} />)}</section>
+          <section className="metric-grid" aria-label="Key metrics">{metrics.map((metric, index) => <StableMetricCard metric={metric} index={index} key={metric.key} />)}</section>
 
           <section className="analysis-grid">
-            <article id="growth-panel" tabIndex={-1} className={`panel growth-panel${spotlight === 'growth-panel' ? ' spotlight' : ''}`}><header><h2>Growth Overview <Info /></h2><div><button type="button" onClick={() => notify(`${growth.metricLabel} is the active metric`)}>{growth.metricLabel} <ChevronDown /></button><button type="button" onClick={() => notify(`${growth.rangeLabel} evidence window selected`)}>{growth.rangeLabel} <ChevronDown /></button></div></header><GrowthChart growth={growth} /></article>
+            <article id="growth-panel" tabIndex={-1} className="panel growth-panel"><header><h2>Growth Overview <Info /></h2><div><button type="button" onClick={() => notify(`${growth.metricLabel} is the active metric`)}>{growth.metricLabel} <ChevronDown /></button><button type="button" onClick={() => notify(`${growth.rangeLabel} evidence window selected`)}>{growth.rangeLabel} <ChevronDown /></button></div></header><StableGrowthChart growth={growth} /></article>
 
-            <article id="bottleneck-panel" tabIndex={-1} className={`panel bottleneck-panel${spotlight === 'bottleneck-panel' ? ' spotlight' : ''}`}>
+            <article id="bottleneck-panel" tabIndex={-1} className="panel bottleneck-panel">
               <header><h2><CircleAlert /> <span>Detected Bottleneck</span></h2></header>
               <h3>{bottleneck.stage}</h3>
               <div className="severity">Severity <b>{humanise(bottleneck.severity)}</b></div>
               <p>Evidence-based funnel · {bottleneck.evidenceWindowDays}-day window</p>
-              <FunnelBars bottleneck={bottleneck} />
+              <StableFunnelBars bottleneck={bottleneck} />
               <button onClick={() => { setCopilotReply(`${bottleneck.stage}: ${bottleneck.summary}`); setCopilotOpen(true); }} className="secondary-action" type="button"><BarChart3 /> View full analysis <ArrowRight /></button>
             </article>
 
-            <article id="recommendation-panel" tabIndex={-1} className={`panel recommendation-panel${spotlight === 'recommendation-panel' ? ' spotlight' : ''}`}>
+            <article id="recommendation-panel" tabIndex={-1} className="panel recommendation-panel">
               <header><h2><Sparkles /> AXIOM Recommendation</h2></header>
               <h3>{recommendation.title}</h3>
               <div className="prediction">
@@ -742,7 +742,7 @@ export default function Home() {
           </section>
 
           <section className="operations-grid">
-            <article id="experiments-panel" tabIndex={-1} className={`panel experiments-panel${spotlight === 'experiments-panel' ? ' spotlight' : ''}`}>
+            <article id="experiments-panel" tabIndex={-1} className="panel experiments-panel">
               <header><h2><Beaker /> Active Experiments</h2></header><div className="table-head"><span>Experiment</span><span>Focus Metric</span><span>Status</span><span>Progress</span><span>Impact (Lift)</span></div>
               {experiments.map((experiment) => (
                 <ExperimentRow
@@ -754,7 +754,7 @@ export default function Home() {
               <button className="panel-link" type="button" onClick={() => activateSection('Experiments')}>View all experiments <ArrowRight /></button>
             </article>
 
-            <article id="decisions-panel" tabIndex={-1} className={`panel decisions-panel${spotlight === 'decisions-panel' ? ' spotlight' : ''}`}>
+            <article id="decisions-panel" tabIndex={-1} className="panel decisions-panel">
               <header><h2><ReceiptText /> Recent Decision Receipts</h2></header>
               <div className="decision-list">
                 {decisions.map((decision) => (
@@ -764,7 +764,7 @@ export default function Home() {
               <button className="panel-link" type="button" onClick={() => activateSection('Decisions')}>View all decisions <ArrowRight /></button>
             </article>
           </section>
-        </div> : <SectionPages activeNav={activeNav} data={data} theme={theme} onThemeChange={selectTheme} onOpenCopilot={(message) => { setCopilotReply(message); setCopilotOpen(true); }} onReview={() => setReviewOpen(true)} onExperiment={setSelectedExperiment} onDecision={setSelectedDecision} onNotify={notify} />}
+        </div> : <SectionPages activeNav={activeNav} data={data} theme={theme} onThemeChange={selectTheme} onOpenCopilot={openCopilot} onReview={openReview} onExperiment={setSelectedExperiment} onDecision={setSelectedDecision} onNotify={notify} />}
       </section>
 
       {reviewOpen && (
