@@ -139,7 +139,7 @@ function greeting(): string {
 function Brand() {
   return (
     <div className="brand" aria-label="AXIOM V1">
-      <b className="brand-x brand-x-v2" aria-hidden="true"><img src="/brand/axiom-core-mark-v1-256.png" width="40" height="40" alt="" /></b><span>AXIOM</span><em><b>V</b><span>1</span></em>
+      <span>AXIOM</span><em><b>V</b><span>1</span></em>
     </div>
   );
 }

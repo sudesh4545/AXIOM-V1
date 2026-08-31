@@ -5,9 +5,9 @@ export const metadata: Metadata = {
   title: 'AXIOM — Verified Experimentation OS',
   description: 'Turn business objectives into safe, measurable and verified experiments.',
   icons: {
-    icon: [{ url: '/brand/axiom-core-mark-v1.png', type: 'image/png', sizes: '512x512' }],
-    shortcut: ['/brand/axiom-core-mark-v1.png'],
-    apple: [{ url: '/brand/axiom-core-mark-v1.png', type: 'image/png', sizes: '512x512' }],
+    icon: [{ url: '/brand/axiom-core-transparent-v2.png', type: 'image/png', sizes: '1254x1254' }],
+    shortcut: ['/brand/axiom-core-transparent-v2.png'],
+    apple: [{ url: '/brand/axiom-core-transparent-v2.png', type: 'image/png', sizes: '1254x1254' }],
   },
   openGraph: {
     title: 'AXIOM — Verified Experimentation OS',
