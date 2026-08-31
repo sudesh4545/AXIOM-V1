@@ -2304,12 +2304,16 @@ html.axiom-theme-changing .app-shell :is(.sidebar,.topbar,.dashboard,.section-pa
     transform:translate3d(0,0,0) scale(.975);
     transition-duration:80ms;
   }
-  .app-shell :is(.metric-card,.panel,.command-surface,.mission-card,.radar-metric,.experiment-row,.decision-row,.source-grid-v2 > button,.receipt-list > button):hover :is(svg,.metric-orb,.mission-card-title > i,.receipt-marker > span) {
+  .app-shell :is(.metric-card,.panel,.command-surface,.mission-card,.radar-metric,.experiment-row,.decision-row,.source-grid-v2 > button,.receipt-list > button):hover :is(.metric-orb,.mission-card-title > i,.receipt-marker > span) {
+    transform:translate3d(0,-1px,0) scale(1.07);
+  }
+  .app-shell :is(.metric-card,.panel,.command-surface,.mission-card):hover :is(header h2 > svg,.surface-kicker > span > svg:first-child) {
     transform:translate3d(0,-1px,0) scale(1.07);
   }
 }
 
-.app-shell :is(.metric-card,.panel,.command-surface,.mission-card,.radar-metric,.experiment-row,.decision-row,.source-grid-v2 > button,.receipt-list > button) :is(svg,.metric-orb,.mission-card-title > i,.receipt-marker > span) {
+.app-shell :is(.metric-card,.panel,.command-surface,.mission-card,.radar-metric,.experiment-row,.decision-row,.source-grid-v2 > button,.receipt-list > button) :is(.metric-orb,.mission-card-title > i,.receipt-marker > span),
+.app-shell :is(.metric-card,.panel,.command-surface,.mission-card) :is(header h2 > svg,.surface-kicker > span > svg:first-child) {
   transition:transform var(--motion-medium) var(--motion-ease),filter var(--motion-medium) ease,box-shadow var(--motion-medium) ease;
 }
 
@@ -2349,7 +2353,7 @@ html.axiom-theme-changing .app-shell :is(.sidebar,.topbar,.dashboard,.section-pa
 
 /* Staggered data motion: paths draw once; points and low-cost particles breathe. */
 .app-shell .spark-path polyline { animation:lineDraw 1.15s .08s ease-out backwards!important; }
-.app-shell .chart-path polyline { animation:lineDraw 1.35s .12s ease-out backwards!important; }
+.app-shell .chart-path polyline { stroke-dasharray:none!important;stroke-dashoffset:0!important;animation:axiomGraphReveal .38s .06s ease-out backwards!important; }
 .app-shell .sparkline > i { animation:pointPulse 3s var(--delay) ease-in-out infinite!important; }
 .app-shell .sparkline > b { animation:particleBlink calc(3s + var(--i) * .065s) ease-in-out infinite!important; }
 .app-shell .chart-bars i { animation:barRise .72s var(--bar-delay) var(--motion-ease) backwards!important; }
@@ -2361,7 +2365,7 @@ html.axiom-theme-changing .app-shell :is(.sidebar,.topbar,.dashboard,.section-pa
 .app-shell .prediction i { animation:ringPulse 5.4s ease-in-out infinite!important; }
 .app-shell .primary-action { animation:none!important; }
 
-.app-shell .telemetry-line { stroke-dasharray:400;stroke-dashoffset:400;animation:axiomTelemetryDraw 1.25s .12s var(--motion-ease) forwards; }
+.app-shell .telemetry-line { stroke-dasharray:none;stroke-dashoffset:0;animation:axiomGraphReveal .38s .06s ease-out backwards; }
 .app-shell .telemetry-stems > i { transform-origin:bottom;animation:axiomTelemetryStem .72s var(--motion-ease) backwards;animation-delay:calc(var(--i,0) * 35ms); }
 .app-shell .telemetry-points > i { animation:axiomTelemetryPoint 3.2s ease-in-out infinite; }
 .app-shell .telemetry-signals > i { animation:axiomTelemetrySignal 4.2s ease-in-out infinite; }
@@ -2391,7 +2395,7 @@ html.axiom-theme-changing .app-shell :is(.sidebar,.topbar,.dashboard,.section-pa
 @keyframes axiomOverviewUp { from { opacity:.2;transform:translate3d(0,14px,0); } to { opacity:1;transform:translate3d(0,0,0); } }
 @keyframes axiomAmbientLayer { from { transform:translate3d(-5px,-3px,0); } to { transform:translate3d(7px,5px,0); } }
 @keyframes axiomPanelParticles { from { transform:translate3d(-4px,-3px,0);opacity:.72; } to { transform:translate3d(6px,4px,0);opacity:1; } }
-@keyframes axiomTelemetryDraw { to { stroke-dashoffset:0; } }
+@keyframes axiomGraphReveal { from { opacity:.2; } to { opacity:1; } }
 @keyframes axiomTelemetryStem { from { opacity:0;transform:translateX(-50%) scaleY(0); } to { opacity:1;transform:translateX(-50%) scaleY(1); } }
 @keyframes axiomTelemetryPoint { 0%,100% { opacity:.72;transform:translate(-50%,-50%) scale(.78); } 50% { opacity:1;transform:translate(-50%,-50%) scale(1.18); } }
 @keyframes axiomTelemetrySignal { 0%,100% { opacity:.32;transform:translate(-50%,-50%) translateY(3px) scale(.7); } 50% { opacity:.95;transform:translate(-50%,-50%) translateY(-4px) scale(1.2); } }
