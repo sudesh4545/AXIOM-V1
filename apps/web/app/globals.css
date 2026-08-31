@@ -182,7 +182,7 @@ svg { display: block; }
 .welcome-row p { margin: 7px 0 0; color: #c4cbda; }
 .welcome-row p b { background: linear-gradient(90deg, #21dbff, #d853ff); -webkit-background-clip: text; color: transparent; font-weight: 520; }
 .live-status { height: 50px; margin-top: 1px; padding: 0 17px; display: flex; align-items: center; gap: 9px; border: 1px solid #365076; border-radius: 14px; background: rgba(5,13,32,.88); box-shadow: inset 0 0 20px rgba(12,61,130,.17); cursor: pointer; }
-.live-status > i { width: 10px; height: 10px; border-radius: 50%; background: #24efa0; box-shadow: 0 0 9px #24efa0; animation: liveBlink 1.8s ease-in-out infinite; }
+.live-status > i { width: 10px; height: 10px; border-radius: 50%; background: #02abbd; box-shadow: 0 0 9px #24efa0; animation: liveBlink 1.8s ease-in-out infinite; }
 .live-status b { color: #2ff0a8; font-weight: 500; }
 .live-status span { margin-left: 26px; color: #cbd2df; }
 .live-status svg { width: 17px; margin-left: 5px; }
@@ -1731,15 +1731,15 @@ html[data-theme="dark"],html[data-theme="neon"] { color-scheme:dark; }
 @media (min-width:1001px) and (max-height:1040px) {
   .auth-page { height:100dvh;min-height:0; }
   .auth-topbar { height:70px; }
-  .auth-experience { min-height:calc(100dvh - 70px);padding:18px clamp(28px,4.5vw,70px) 12px;grid-template-columns:minmax(330px,1fr) minmax(390px,500px);gap:clamp(28px,4vw,62px); }
+  .auth-experience { min-height:calc(100dvh - 70px);padding:18px clamp(28px,4.5vw,70px) 12px;grid-template-columns:minmax(330px,1fr) minmax(340px,460px);gap:clamp(28px,4vw,62px); }
   .auth-story h1 { margin:11px 0 10px;font-size:clamp(36px,3.75vw,54px);line-height:.96; }
   .auth-story-copy > p { font-size:clamp(15px,1.05vw,18px);line-height:1.48; }
   .auth-signal { margin-top:22px;padding:12px 14px; }
-  .auth-signal > i { width:38px;height:38px; }
+  .auth-signal > i { width:38px;height: 38px; }
   .auth-proof { margin-top:9px; }
   .auth-proof span { padding:8px 11px; }
   .auth-proof b { font-size:17px; }
-  .auth-card { min-height:0;max-height:calc(100dvh - 82px);padding:18px 22px;border-radius:19px; }
+  .auth-card { min-height:0;max-height:calc(100dvh - 82px);padding:8px 22px 8px;border-radius:19px;transform: translateY(-30px); }
   .auth-back { margin-bottom:10px; }
   .auth-heading h2 { margin:4px 0 2px;font-size:25px; }
   .oauth-grid { margin-top:11px; }
@@ -1803,16 +1803,25 @@ html[data-theme="dark"],html[data-theme="neon"] { color-scheme:dark; }
   .auth-story { min-height:calc(100dvh - 100px);padding:14px 0 12px;display:flex;flex-direction:column;justify-content:space-between; }
   .auth-visual { flex:1;min-height:190px;max-height:285px;margin:12px 0; }
   .auth-assurance { padding-bottom:2px; }
-  .auth-card { min-height:calc(100dvh - 100px);align-self:stretch;max-height:none;display:flex;flex-direction:column;justify-content:space-evenly; }
+ .auth-card {
+  min-height: 580px;
+  align-self: center;
+  max-height: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  position: relative;
+  top: -17px;
+}
   .auth-card .oauth-grid,.auth-card .phone-entry,.auth-card .auth-divider,.auth-card .auth-switch,.auth-card .auth-message,.auth-card footer { margin-top:0; }
   .auth-card footer { font-size:12px; }
 }
 
 @media (min-width:1001px) and (max-height:720px) {
   .auth-topbar { height:62px; }
-  .auth-experience { min-height:calc(100dvh - 62px);padding-top:10px; }
+  .auth-experience { min-height:calc(100dvh - 62px);padding-top:20px; }
   .auth-story { padding-top:8px; }
-  .auth-story h1 { font-size:clamp(32px,3.45vw,48px); }
+  .auth-story h1 { font-size:clamp(30px,3.2vw,43px); }
   .auth-signal { margin-top:14px;padding:9px 12px; }
   .auth-proof { margin-top:5px; }
   .auth-card { padding:14px 20px; }
@@ -1829,6 +1838,382 @@ html[data-theme="dark"],html[data-theme="neon"] { color-scheme:dark; }
   .auth-story,.auth-card,.auth-card::before,.auth-story h1 em,.auth-brand > i { animation:none!important; }
   .oauth-grid button::after,.phone-entry::after,.auth-submit::after { display:none; }
 }
+
+/* Core visual frame: theme-aware holographic treatment for the identity gateway. */
+.auth-visual {
+  --visual-cyan:#42dcff;
+  --visual-violet:#8c5cff;
+  border-color:rgba(66,198,255,.38);
+  border-radius:20px;
+  background:linear-gradient(110deg,#061426 0%,#071c35 27%,#020713 50%,#10102e 73%,#080b1d 100%);
+  box-shadow:inset 0 0 45px rgba(9,120,255,.16),0 16px 40px rgba(0,0,0,.25),0 0 28px rgba(44,182,255,.14);
+}
+.auth-visual::before { opacity:.34;filter:blur(20px) saturate(1.25);transform:scale(1.08); }
+.auth-visual::after { background:linear-gradient(90deg,rgba(2,7,19,.42),transparent 24%,transparent 76%,rgba(5,7,27,.48)),linear-gradient(180deg,rgba(58,205,255,.08),transparent 28%,transparent 72%,rgba(110,70,255,.12));box-shadow:inset 0 0 32px rgba(3,7,16,.62),inset 0 1px rgba(255,255,255,.12); }
+.auth-visual img { filter:drop-shadow(0 0 18px rgba(54,201,255,.18));transition:filter .3s ease,transform .3s ease; }
+.auth-visual:hover img { transform:scale(1.025);filter:drop-shadow(0 0 24px rgba(64,220,255,.35)); }
+.auth-page.theme-neon .auth-visual { border-color:rgba(141,91,255,.7);background:linear-gradient(110deg,#071c39,#081f40 28%,#080b24 50%,#24103f 74%,#100b26);box-shadow:inset 0 0 52px rgba(29,153,255,.22),0 16px 44px rgba(17,5,61,.45),0 0 36px rgba(137,66,255,.26); }
+.auth-page.theme-neon .auth-visual::before { opacity:.5;filter:blur(22px) saturate(1.6); }
+.auth-page.theme-neon .auth-visual::after { background:linear-gradient(90deg,rgba(0,207,255,.1),transparent 25%,transparent 74%,rgba(158,74,255,.16)); }
+.auth-page.theme-light .auth-visual { border-color:#b5cde3;background:linear-gradient(110deg,#dcebf7,#edf6fc 28%,#f7fbff 50%,#ecebff 74%,#e6eef8);box-shadow:inset 0 0 42px rgba(71,154,211,.18),0 18px 42px rgba(57,90,125,.2),0 0 25px rgba(56,162,224,.12); }
+.auth-page.theme-light .auth-visual::before { opacity:.2;filter:blur(22px) saturate(.9) brightness(1.3); }
+.auth-page.theme-light .auth-visual::after { background:linear-gradient(90deg,rgba(225,243,255,.68),transparent 24%,transparent 76%,rgba(236,231,255,.7)),linear-gradient(180deg,rgba(255,255,255,.36),transparent 35%,rgba(83,134,187,.08));box-shadow:inset 0 0 28px rgba(255,255,255,.8),inset 0 1px rgba(255,255,255,.9); }
+.auth-page.theme-light .auth-visual img { filter:drop-shadow(0 8px 18px rgba(36,73,112,.28)); }
+
+/* The artwork stands on its own: remove the oversized frame and keep only the
+   supplied square image with a cinematic 3D glow treatment. */
+.auth-visual {
+  width:min(360px,100%);
+  height:min(360px,34vh);
+  aspect-ratio:1;
+  margin:16px auto;
+  overflow:visible;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  perspective:900px;
+}
+.auth-visual::before { inset:4%;z-index:-1;border-radius:50%;filter:blur(30px) saturate(1.5);opacity:.5;transform:scale(1.08); }
+.auth-visual::after { inset:8%;border-radius:50%;background:radial-gradient(circle,transparent 48%,rgba(54,201,255,.12) 63%,transparent 72%);box-shadow:none; }
+.auth-visual > span { overflow:visible; }
+.auth-visual img { border-radius:12px;object-fit:contain!important;filter:drop-shadow(0 0 12px rgba(49,204,255,.35)) drop-shadow(0 0 28px rgba(117,71,255,.22));animation:authCoreFloat 6s ease-in-out infinite;transform-style:preserve-3d;transition:filter .35s ease; }
+.auth-visual:hover img { filter:drop-shadow(0 0 18px rgba(49,224,255,.72)) drop-shadow(0 0 42px rgba(143,71,255,.54));animation-play-state:paused;transform:rotateY(-5deg) rotateX(3deg) scale(1.035); }
+.auth-visual > span::before,.auth-visual > span::after { display:none; }
+.auth-page.theme-neon .auth-visual::before { opacity:.78;filter:blur(34px) saturate(1.9); }
+.auth-page.theme-neon .auth-visual::after { background:radial-gradient(circle,transparent 44%,rgba(0,220,255,.18) 58%,rgba(150,73,255,.22) 67%,transparent 76%); }
+.auth-page.theme-neon .auth-visual img { filter:drop-shadow(0 0 18px rgba(0,221,255,.65)) drop-shadow(0 0 38px rgba(150,73,255,.5)); }
+.auth-page.theme-light .auth-visual::before { opacity:.3;filter:blur(32px) saturate(.8) brightness(1.35); }
+.auth-page.theme-light .auth-visual::after { background:radial-gradient(circle,transparent 50%,rgba(73,161,222,.16) 65%,transparent 76%); }
+.auth-page.theme-light .auth-visual img { filter:drop-shadow(0 12px 18px rgba(36,73,112,.3)) drop-shadow(0 0 22px rgba(64,158,228,.28)); }
+@keyframes authCoreFloat { 0%,100% { transform:translateY(0) rotateY(-1deg) rotateX(0deg); } 50% { transform:translateY(-8px) rotateY(2deg) rotateX(1.5deg); } }
+
+/* Rounded 3D artwork surface keeps the supplied image readable in every theme. */
+.auth-visual img {
+  border:1px solid rgba(103,220,255,.3);
+  border-radius:28px!important;
+  box-shadow:0 20px 32px rgba(0,0,0,.34),inset 0 1px rgba(255,255,255,.18);
+  transform-style:preserve-3d;
+}
+.auth-page.theme-neon .auth-visual img {
+  border-color:rgba(154,103,255,.68);
+  box-shadow:0 22px 38px rgba(10,2,35,.55),0 0 26px rgba(37,214,255,.25),0 0 46px rgba(146,70,255,.26),inset 0 1px rgba(255,255,255,.22);
+}
+.auth-page.theme-light .auth-visual img {
+  border-color:rgba(55,154,220,.6);
+  box-shadow:0 22px 38px rgba(31,66,103,.3),0 0 24px rgba(43,174,231,.25),0 0 40px rgba(116,85,235,.12),inset 0 1px rgba(255,255,255,.34);
+  filter:brightness(1.08) contrast(1.08) saturate(1.08) drop-shadow(0 0 15px rgba(44,178,232,.25));
+}
+.auth-page.theme-neon .auth-visual:hover img,.auth-page.theme-light .auth-visual:hover img {
+  transform:rotateY(-7deg) rotateX(4deg) translateY(-3px) scale(1.04);
+}
+
+/* Final artwork presentation: only the supplied photo, with softly curved
+   edges. No decorative circle, frame, crop, glow or overlay is added. */
+.auth-visual {
+  width:min(360px,100%);
+  height:min(360px,34vh);
+  aspect-ratio:1;
+  margin:16px auto;
+  overflow:hidden;
+  border:0;
+  border-radius:24px;
+  background:transparent;
+  box-shadow:none;
+  perspective:none;
+}
+.auth-visual::before,.auth-visual::after { display:none!important; }
+.auth-visual img {
+  border:0!important;
+  border-radius:24px!important;
+  box-shadow:none!important;
+  filter:none!important;
+  animation:none!important;
+  transform:none!important;
+}
+.auth-visual:hover img { filter:none!important;transform:none!important; }
+
+/* Keep the visual wrapper exactly the same size as the artwork: no theme
+   background can show as left/right side strips. */
+.auth-page .auth-visual,
+.auth-page.theme-neon .auth-visual,
+.auth-page.theme-light .auth-visual {
+  flex:0 0 min(360px,100%);
+  width:min(360px,100%)!important;
+  height:min(360px,34vh)!important;
+  min-height:0!important;
+  max-height:none!important;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+.auth-visual > span,
+.auth-visual > span img {
+  width:100%!important;
+  height:100%!important;
+}
+.auth-visual > span img {
+  object-fit:cover!important;
+  object-position:center;
+  border-radius:26px!important;
+}
+
+/* Restore the original compact two-column layout while keeping the artwork
+   itself clean and rounded. */
+.auth-page .auth-visual,
+.auth-page.theme-neon .auth-visual,
+.auth-page.theme-light .auth-visual {
+  flex:1 1 auto;
+  width:min(590px,100%)!important;
+  height:clamp(210px,27vh,300px)!important;
+  min-height:190px!important;
+  max-height:300px!important;
+  margin:12px 0!important;
+  overflow:hidden;
+  background:transparent!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+}
+.auth-visual > span img {
+  object-fit:contain!important;
+  border-radius:24px!important;
+}
+
+/* Artwork-only 3D treatment: constrain the image itself to a centered square
+   so its own curved edges and glow are visible without a surrounding panel. */
+.auth-page .auth-visual { overflow:visible!important;perspective:1000px; }
+.auth-visual > img,
+.auth-visual > span img {
+  object-fit:cover!important;
+  border-radius:28px!important;
+  border:1px solid rgba(91,220,255,.48)!important;
+  box-shadow:0 18px 30px rgba(0,0,0,.38),0 0 18px rgba(43,206,255,.3),0 0 38px rgba(112,73,255,.2),inset 0 1px rgba(255,255,255,.2)!important;
+  transform-style:preserve-3d;
+  animation:authArtwork3d 6.5s ease-in-out infinite;
+}
+.auth-visual > img {
+  width:min(300px,100%)!important;
+  height:min(300px,100%)!important;
+  left:50%!important;
+  top:50%!important;
+  right:auto!important;
+  bottom:auto!important;
+  transform:translate(-50%,-50%);
+}
+.auth-visual > span {
+  width:min(300px,100%)!important;
+  height:min(300px,100%)!important;
+  left:50%!important;
+  top:50%!important;
+  right:auto!important;
+  bottom:auto!important;
+  transform:translate(-50%,-50%)!important;
+}
+.auth-visual > span img { animation:authArtwork3dInner 6.5s ease-in-out infinite; }
+.auth-page.theme-neon .auth-visual > img,
+.auth-page.theme-neon .auth-visual > span img { border-color:rgba(157,102,255,.82)!important;box-shadow:0 21px 34px rgba(11,2,38,.58),0 0 22px rgba(0,220,255,.55),0 0 48px rgba(148,70,255,.48),inset 0 1px rgba(255,255,255,.26)!important; }
+.auth-page.theme-light .auth-visual > img,
+.auth-page.theme-light .auth-visual > span img { border-color:rgba(44,149,216,.7)!important;box-shadow:0 21px 34px rgba(35,67,100,.3),0 0 20px rgba(44,179,231,.4),0 0 38px rgba(116,85,235,.2),inset 0 1px rgba(255,255,255,.42)!important; }
+@keyframes authArtwork3d { 0%,100% { transform:translate(-50%,-50%) rotateY(-2deg) rotateX(1deg) translateZ(0); } 50% { transform:translate(-50%,-53%) rotateY(4deg) rotateX(-2deg) translateZ(12px); } }
+@keyframes authArtwork3dInner { 0%,100% { transform:rotateY(-2deg) rotateX(1deg) translateZ(0); } 50% { transform:translateY(-3px) rotateY(4deg) rotateX(-2deg) translateZ(12px); } }
+
+/* Keep the artwork inside its own compact slot so it never covers assurance
+   metrics or changes the two-column page height. */
+.auth-page .auth-visual {
+  flex:0 0 clamp(190px,27vh,285px)!important;
+  height:clamp(190px,27vh,285px)!important;
+  min-height:0!important;
+  max-height:285px!important;
+  overflow:hidden!important;
+}
+.auth-visual > img {
+  width:clamp(190px,27vh,285px)!important;
+  height:clamp(190px,27vh,285px)!important;
+  left:50%!important;
+  top:50%!important;
+  right:auto!important;
+  bottom:auto!important;
+  transform:translate(-50%,-50%)!important;
+}
+.auth-visual > img,
+.auth-visual:hover > img {
+  animation:none!important;
+  transform:translate(-50%,-50%)!important;
+  transition:none!important;
+  will-change:auto;
+}
+.auth-visual > span {
+  width:min(285px,100%)!important;
+  height:min(285px,100%)!important;
+}
+
+@media (min-width:1001px) and (max-height:1040px) {
+  /* Keep the artwork in the original reading order directly below the copy;
+     distributed flex spacing was pushing it too far down. */
+  .auth-story { display:grid!important;grid-template-rows:auto minmax(190px,1fr) auto;align-content:stretch;justify-content:stretch!important; }
+  .auth-visual { align-self:center;justify-self:center;margin:0!important; }
+}
+
+/* Quantum identity visual. The previous A/AXIOM artwork remains at
+   /brand/axiom-core-art-v1.webp and is recorded on the element for instant rollback. */
+.auth-page .auth-universe-visual {
+  display:grid!important;
+  place-items:center;
+  overflow:visible!important;
+  isolation:isolate;
+  contain:layout;
+}
+.auth-universe-stage {
+  width:clamp(205px,29vh,300px);
+  height:clamp(205px,29vh,300px);
+  position:relative;
+  left:-10px;
+  perspective:1000px;
+  transform-style:preserve-3d;
+  animation:authUniverseFloat 6.8s ease-in-out infinite;
+}
+.auth-universe-image {
+  z-index:2!important;
+  width:100%!important;
+  height:100%!important;
+  inset:0!important;
+  object-fit:cover!important;
+  border:0!important;
+  border-radius:50%!important;
+  box-shadow:none!important;
+  filter:saturate(1.16) contrast(1.08) brightness(1.06) drop-shadow(0 0 14px rgba(43,218,255,.62)) drop-shadow(0 0 31px rgba(132,64,255,.5))!important;
+  -webkit-mask-image:radial-gradient(circle at 50% 50%,#000 0 49%,rgba(0,0,0,.98) 56%,rgba(0,0,0,.62) 62%,transparent 69%);
+  mask-image:radial-gradient(circle at 50% 50%,#000 0 49%,rgba(0,0,0,.98) 56%,rgba(0,0,0,.62) 62%,transparent 69%);
+  animation:authUniverseBreathe 4.2s ease-in-out infinite!important;
+  transform:none!important;
+}
+.auth-universe-image-light { display:none!important; }
+.auth-page.theme-light .auth-universe-image-dark { display:none!important; }
+.auth-page.theme-light .auth-universe-image-light {
+  display:block!important;
+  object-fit:contain!important;
+  border-radius:0!important;
+  -webkit-mask-image:none!important;
+  mask-image:none!important;
+  filter:saturate(1.12) contrast(1.08) brightness(.98) drop-shadow(0 8px 12px rgba(46,88,132,.18)) drop-shadow(0 0 18px rgba(40,179,231,.28))!important;
+  animation:authUniverseLightBreathe 4.2s ease-in-out infinite!important;
+}
+.auth-universe-aura {
+  position:absolute;
+  z-index:0;
+  inset:14%;
+  border-radius:50%;
+  background:radial-gradient(circle,#fff7b8 0 2%,#55dcff 8%,rgba(35,170,255,.72) 22%,rgba(130,50,255,.43) 46%,transparent 72%);
+  filter:blur(18px);
+  opacity:.82;
+  animation:authUniversePulse 3.2s ease-in-out infinite;
+}
+.auth-universe-orbit {
+  position:absolute;
+  left:5%;
+  top:35%;
+  z-index:1;
+  width:90%;
+  height:30%;
+  border:1px solid rgba(69,224,255,.62);
+  border-radius:50%;
+  box-shadow:0 0 8px rgba(55,222,255,.72),inset 0 0 7px rgba(117,69,255,.42);
+  transform-style:preserve-3d;
+}
+.auth-universe-orbit::before,.auth-universe-orbit::after {
+  content:"";
+  position:absolute;
+  width:7px;
+  height:7px;
+  top:50%;
+  border-radius:50%;
+  background:#e9fbff;
+  box-shadow:0 0 6px #fff,0 0 14px #28dfff,0 0 24px #8254ff;
+}
+.auth-universe-orbit::before { left:-3px; }
+.auth-universe-orbit::after { right:-3px;background:#ffb0ff;box-shadow:0 0 6px #fff,0 0 14px #ff4bea,0 0 24px #6f51ff; }
+.orbit-back { transform:rotateZ(-13deg) rotateX(68deg);animation:authOrbitBack 8s linear infinite; }
+.orbit-front { z-index:4;transform:rotateZ(32deg) rotateX(72deg);border-color:rgba(194,88,255,.65);animation:authOrbitFront 6.4s linear infinite reverse; }
+.auth-universe-scan {
+  position:absolute;
+  z-index:3;
+  inset:11%;
+  border:1px solid rgba(67,211,255,.24);
+  border-radius:50%;
+  background:conic-gradient(from 0deg,transparent 0 72%,rgba(61,219,255,.2) 80%,rgba(200,74,255,.24) 87%,transparent 94%);
+  -webkit-mask-image:radial-gradient(circle,transparent 0 67%,#000 68%);
+  mask-image:radial-gradient(circle,transparent 0 67%,#000 68%);
+  animation:authUniverseScan 7s linear infinite;
+}
+.auth-universe-tags { position:absolute;z-index:6;inset:0;pointer-events:none; }
+.auth-universe-tags i {
+  position:absolute;
+  padding:5px 9px;
+  border:1px solid rgba(83,144,210,.38);
+  border-radius:8px;
+  color:#4ceaff;
+  background:rgba(3,10,27,.84);
+  box-shadow:0 0 18px rgba(48,204,255,.13),inset 0 0 12px rgba(51,117,190,.07);
+  font-size:9px;
+  font-style:normal;
+  font-weight:850;
+  letter-spacing:.14em;
+  backdrop-filter:blur(8px);
+  animation:authTagFloat 4.8s ease-in-out infinite;
+}
+.auth-universe-tags .tag-mrr { left:-3%;top:22%; }
+.auth-universe-tags .tag-ai { right:0;top:16%;color:#d599ff;animation-delay:-1.2s; }
+.auth-universe-tags .tag-data { left:-6%;bottom:22%;animation-delay:-2.1s; }
+.auth-universe-tags .tag-proof { right:-7%;bottom:27%;color:#d599ff;animation-delay:-3.2s; }
+.auth-universe-tags .tag-growth { left:40%;bottom:-1%;animation-delay:-.7s; }
+.auth-universe-particles { position:absolute;z-index:5;inset:-5%;pointer-events:none; }
+.auth-universe-particles i { position:absolute;width:3px;height:3px;border-radius:50%;background:#69eaff;box-shadow:0 0 9px #2fdfff;animation:authParticleRise 4.5s ease-in-out infinite; }
+.auth-universe-particles i:nth-child(1) { left:12%;top:64%; }.auth-universe-particles i:nth-child(2) { left:22%;top:19%;animation-delay:-.7s; }.auth-universe-particles i:nth-child(3) { left:39%;top:8%;animation-delay:-1.4s;background:#d66aff; }.auth-universe-particles i:nth-child(4) { left:72%;top:14%;animation-delay:-2.1s; }.auth-universe-particles i:nth-child(5) { left:89%;top:42%;animation-delay:-2.8s;background:#ed75ff; }.auth-universe-particles i:nth-child(6) { left:82%;top:76%;animation-delay:-3.5s; }.auth-universe-particles i:nth-child(7) { left:59%;top:91%;animation-delay:-.35s;background:#da70ff; }.auth-universe-particles i:nth-child(8) { left:28%;top:87%;animation-delay:-1.05s; }.auth-universe-particles i:nth-child(9) { left:5%;top:43%;animation-delay:-1.75s;background:#d66aff; }.auth-universe-particles i:nth-child(10) { left:52%;top:18%;animation-delay:-2.45s; }
+.auth-universe-visual:hover .auth-universe-stage { animation-play-state:paused;transform:translateY(-3px) rotateX(3deg) rotateY(-5deg) scale(1.035); }
+.auth-page.theme-neon .auth-universe-image { filter:saturate(1.28) contrast(1.1) brightness(1.08) drop-shadow(0 0 18px rgba(0,225,255,.78)) drop-shadow(0 0 42px rgba(150,68,255,.66))!important; }
+.auth-page.theme-light .auth-universe-stage {
+  top:-7px;
+  filter:drop-shadow(0 16px 24px rgba(34,66,110,.24));
+}
+.auth-page.theme-light .auth-universe-stage::before {
+  content:"";
+  position:absolute;
+  z-index:-1;
+  inset:7%;
+  border:1px solid rgba(80,177,220,.22);
+  border-radius:50%;
+  background:radial-gradient(circle at 48% 45%,rgba(255,255,255,.96),rgba(218,244,255,.62) 46%,rgba(222,218,255,.28) 64%,transparent 73%);
+  box-shadow:inset 0 0 30px rgba(255,255,255,.74),0 0 24px rgba(39,160,231,.16),0 0 38px rgba(126,74,235,.1);
+}
+.auth-page.theme-light .auth-universe-aura { opacity:.58;background:radial-gradient(circle,#fff7c7 0 2%,rgba(74,213,255,.64) 11%,rgba(108,184,245,.4) 28%,rgba(152,104,237,.24) 48%,transparent 72%); }
+.auth-page.theme-light .auth-universe-orbit { border-color:rgba(27,186,232,.68);box-shadow:0 0 8px rgba(31,190,236,.55),inset 0 0 7px rgba(121,57,224,.42); }
+.auth-page.theme-light .auth-universe-tags i { border-color:rgba(71,169,214,.42);background:rgba(248,253,255,.9);color:#087da7;box-shadow:0 5px 14px rgba(28,66,107,.14),0 0 14px rgba(50,195,237,.1); }
+.auth-page.theme-light .auth-universe-tags .tag-ai,.auth-page.theme-light .auth-universe-tags .tag-proof { color:#7951ba; }
+
+/* Theme geometry lock: dark is the reference layout. Older theme-specific
+   selectors used a taller visual slot in light/neon, which shifted both
+   columns when the appearance toggle changed. */
+.auth-page .auth-universe-visual,
+.auth-page.theme-light .auth-universe-visual,
+.auth-page.theme-neon .auth-universe-visual {
+  flex:0 0 clamp(190px,27vh,285px)!important;
+  width:min(590px,100%)!important;
+  height:clamp(190px,27vh,285px)!important;
+  min-height:0!important;
+  max-height:285px!important;
+  margin:12px 0!important;
+}
+@keyframes authUniverseFloat { 0%,100% { transform:translateY(2px) rotateX(1deg) rotateY(-2deg); } 50% { transform:translateY(-9px) rotateX(-2deg) rotateY(3deg); } }
+@keyframes authUniverseBreathe { 0%,100% { transform:scale(.985)!important;filter:saturate(1.13) brightness(1.02) drop-shadow(0 0 13px rgba(43,218,255,.52)) drop-shadow(0 0 28px rgba(132,64,255,.42))!important; } 50% { transform:scale(1.025)!important;filter:saturate(1.25) brightness(1.16) drop-shadow(0 0 20px rgba(61,231,255,.85)) drop-shadow(0 0 46px rgba(154,67,255,.72))!important; } }
+@keyframes authUniverseLightBreathe { 0%,100% { transform:scale(1.11)!important;filter:saturate(1.08) contrast(1.06) brightness(.98) drop-shadow(0 8px 12px rgba(46,88,132,.16)) drop-shadow(0 0 16px rgba(40,179,231,.24))!important; } 50% { transform:scale(1.16)!important;filter:saturate(1.18) contrast(1.1) brightness(1.04) drop-shadow(0 9px 14px rgba(46,88,132,.2)) drop-shadow(0 0 24px rgba(40,179,231,.38))!important; } }
+@keyframes authUniversePulse { 0%,100% { opacity:.58;transform:scale(.9); } 50% { opacity:.95;transform:scale(1.14); } }
+@keyframes authOrbitBack { to { transform:rotateZ(347deg) rotateX(68deg); } }
+@keyframes authOrbitFront { to { transform:rotateZ(392deg) rotateX(72deg); } }
+@keyframes authUniverseScan { to { transform:rotate(360deg); } }
+@keyframes authTagFloat { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-5px); } }
+@keyframes authParticleRise { 0%,100% { opacity:.2;transform:translateY(8px) scale(.7); } 50% { opacity:1;transform:translateY(-9px) scale(1.45); } }
+@media (prefers-reduced-motion:reduce) { .auth-universe-stage,.auth-universe-image,.auth-universe-aura,.auth-universe-orbit,.auth-universe-scan,.auth-universe-tags i,.auth-universe-particles i { animation:none!important; } }
 .legal-page { min-height:100vh;padding:54px 20px;color:#eaf3ff;background:radial-gradient(circle at 30% 0,rgba(21,139,255,.16),transparent 30%),#040812;font-family:var(--font-sans,Inter,ui-sans-serif,system-ui,sans-serif); }.legal-page article { width:min(780px,100%);margin:auto;padding:38px;border:1px solid rgba(68,139,205,.32);border-radius:22px;background:rgba(8,17,35,.9);box-shadow:0 25px 70px rgba(0,0,0,.32); }.legal-page article > a { color:#3ed8f7;text-decoration:none; }.legal-page article > span { margin-top:38px;display:block;color:#45dcf8;font-size:11px;font-weight:800;letter-spacing:.16em; }.legal-page h1 { margin:8px 0 4px;font-size:42px;letter-spacing:-.045em; }.legal-page .legal-date { color:#72849d;font-size:13px; }.legal-page h2 { margin:28px 0 7px;font-size:19px; }.legal-page p { margin:0;color:#aab8cb;font-size:15px;line-height:1.7; }html[data-theme="light"] .legal-page { color:#14243f;background:#edf3fa; }html[data-theme="light"] .legal-page article { border-color:#cbd8e6;background:#fff;box-shadow:0 24px 60px rgba(43,70,103,.12); }html[data-theme="light"] .legal-page p { color:#52647c; }
 
 @media (min-width:1201px) and (max-height:780px) {
