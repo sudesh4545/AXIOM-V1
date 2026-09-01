@@ -1,0 +1,12 @@
+event_name,event_type,user_id,occurred_at,monthly_amount_inr
+user_signed_up,lifecycle,acme-001,2026-08-25T09:10:00Z,0
+trial_started,lifecycle,acme-001,2026-08-25T09:12:00Z,0
+activation_completed,lifecycle,acme-001,2026-08-25T10:30:00Z,0
+subscription_started,revenue,acme-001,2026-08-26T08:00:00Z,1499
+user_signed_up,lifecycle,acme-002,2026-08-26T11:20:00Z,0
+trial_started,lifecycle,acme-002,2026-08-26T11:25:00Z,0
+teammate_invited,lifecycle,acme-002,2026-08-27T14:00:00Z,0
+user_signed_up,lifecycle,acme-003,2026-08-28T15:40:00Z,0
+trial_started,lifecycle,acme-003,2026-08-28T15:45:00Z,0
+subscription_started,revenue,acme-003,2026-08-29T09:15:00Z,999
+subscription_cancelled,revenue,acme-003,2026-08-31T16:10:00Z,999

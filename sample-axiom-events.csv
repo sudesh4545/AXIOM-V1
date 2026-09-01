@@ -1,0 +1,9 @@
+event_name,event_type,user_id,occurred_at,monthly_amount_inr
+user_signed_up,lifecycle,user-101,2026-09-01T09:00:00Z,0
+trial_started,lifecycle,user-101,2026-09-01T09:05:00Z,0
+activation_completed,lifecycle,user-101,2026-09-01T09:20:00Z,0
+subscription_started,revenue,user-101,2026-09-02T10:00:00Z,499
+user_signed_up,lifecycle,user-102,2026-09-02T11:00:00Z,0
+trial_started,lifecycle,user-102,2026-09-02T11:04:00Z,0
+user_signed_up,lifecycle,user-103,2026-09-03T12:00:00Z,0
+trial_started,lifecycle,user-103,2026-09-03T12:06:00Z,0
