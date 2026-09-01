@@ -367,7 +367,17 @@ export async function applyWorkspaceMeasurement(payload: DashboardResponse, work
     .bind(workspaceId, MAX_EVENTS).all<EventRow>();
   const computed = computeMeasurement(result.results ?? []);
   payload.measurement = computed.measurement;
-  if (!computed.metrics || !computed.growth || !computed.bottleneck || !computed.recommendation) return;
+  if (!computed.metrics || !computed.growth || !computed.bottleneck || !computed.recommendation) {
+    // Never present bundled demo numbers as a customer's business data. Until
+    // the evidence gate has enough real events, show an honest collecting state.
+    payload.dataSource = 'ingested';
+    payload.dataSourceNote = `Waiting for company data: ${computed.measurement.observedUsers} users observed; ${computed.measurement.requiredUsers} required before metrics are calculated.`;
+    payload.metrics = payload.metrics.map((metric) => ({ ...metric, displayValue: '—', rawValue: 0, deltaPct: 0, spark: metric.spark.map(() => 0) }));
+    payload.growth = { ...payload.growth, currentDisplay: '—', points: payload.growth.points.map((point) => ({ ...point, value: 0 })), axisLabels: payload.growth.axisLabels.map(() => '₹0') };
+    payload.bottleneck = { ...payload.bottleneck, stage: 'Waiting for company data', severity: 'low', evidence: ['Upload company events to begin analysis.'] };
+    payload.recommendation = { ...payload.recommendation, title: 'Connect your company data', summary: 'Import at least 10 users and their key events to unlock recommendations.', predictedUpliftPct: 0 };
+    return;
+  }
 
   payload.metrics = computed.metrics;
   payload.growth = computed.growth;
