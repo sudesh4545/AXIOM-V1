@@ -164,7 +164,8 @@ function IntegrationsPage({ data, onNotify }: Pick<SectionPagesProps, 'data' | '
       const auth = await firebaseAuthorizationHeader();
       const response = await fetch('/api/v1/events', { method: 'POST', headers: { 'Content-Type': 'application/json', ...auth }, body: JSON.stringify({ workspaceId: data.workspace.id, source: 'axiom_sdk', events }) });
       if (!response.ok) throw new Error('Import failed');
-      setImportStatus(`${events.length} rows imported successfully. Dashboard refresh karke measured metrics dekhein.`);
+      setImportStatus(`${events.length} rows imported successfully. Dashboard refresh ho raha hai…`);
+      window.setTimeout(() => window.location.reload(), 900);
     } catch { setImportStatus('Import nahi ho paya. CSV columns aur login check karein.'); }
   }
   return <section id="section-integrations" tabIndex={-1} className="section-page command-page integrations-command integrations-v2">
