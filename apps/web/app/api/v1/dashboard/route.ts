@@ -1,6 +1,6 @@
 import { ensureDatabase, getDatabase } from '../../../../db';
 import type { DashboardResponse, DecisionReceiptSummary } from '../../../lib/axiom-contract';
-import { createBundledDemoOverview } from '../../../lib/demo-overview';
+import { createEmptyWorkspaceOverview } from '../../../lib/demo-overview';
 import { loadIngestionSummary } from '../../../lib/server/ingestion';
 import { applyWorkspaceMeasurement } from '../../../lib/server/measurement';
 import { featureFlagKey } from '../../../lib/server/feature-flags';
@@ -39,10 +39,10 @@ async function readOrCreateSnapshot(identity: RequestIdentity, access: Workspace
   if (existing) return existing;
 
   const now = new Date().toISOString();
-  const payload = createBundledDemoOverview();
+  const payload = createEmptyWorkspaceOverview();
   payload.workspace = access.active;
   payload.operatorFirstName = firstName(identity);
-  payload.dataSourceNote = `${access.active.name} is using persistent demo seed data. Connect a product source to replace it with measured results.`;
+  payload.dataSourceNote = `${access.active.name} is waiting for company data. Connect a source or upload events to begin measurement.`;
   await db.prepare(`INSERT INTO workspace_dashboard_snapshots (user_id, workspace_id, payload_json, revision, created_at, updated_at)
     VALUES (?, ?, ?, 1, ?, ?)`)
     .bind(identity.userId, access.active.id, JSON.stringify(payload), now, now).run();

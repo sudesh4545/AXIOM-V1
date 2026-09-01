@@ -28,9 +28,10 @@ function fallbackReply(question: string, context: AiContext): string {
   const bottleneck = context.bottleneck;
   const recommendation = context.recommendation;
   const metric = context.metrics?.find((item) => lower.includes((item.label ?? '').toLowerCase()));
-  const evidenceLabel = context.dataSource === 'demo_seed'
-    ? 'These numbers are demo seed data, so validate the recommendation with real customer events before making a production decision.'
-    : 'This answer uses the latest governed workspace evidence.';
+  const hasMeasuredEvidence = context.metrics?.some((item) => item.displayValue && item.displayValue !== '—');
+  const evidenceLabel = hasMeasuredEvidence
+    ? 'This answer uses the latest governed workspace evidence.'
+    : 'No measured company evidence is available yet. Connect or upload company data before making a production decision.';
 
   if (metric) {
     return `${metric.label} is ${metric.displayValue}, moving ${metric.direction ?? 'flat'} by ${Math.abs(metric.deltaPct ?? 0)}% versus ${metric.comparisonLabel ?? 'the prior period'}. ${metric.isImprovement ? 'The direction is favorable.' : 'The direction needs attention.'} ${evidenceLabel}`;
@@ -88,7 +89,7 @@ export async function POST(request: Request) {
         text: { verbosity: 'medium' },
         store: false,
         max_output_tokens: 900,
-        instructions: 'You are AXIOM AI, an evidence-aware growth operating copilot for B2B SaaS teams. Answer the operator directly in the language they use. Use only the supplied workspace context for business claims. Clearly distinguish demo seed data from measured data. Never present predicted uplift, simulation, or correlation as causal proof. Recommend bounded, reversible next steps and preserve human approval for experiments. Be concise, practical, and specific.',
+        instructions: 'You are AXIOM AI, an evidence-aware growth operating copilot for B2B SaaS teams. Answer the operator directly in the language they use. Use only the supplied workspace context for business claims. If measured company evidence is unavailable, say so clearly and do not invent values. Never present predicted uplift, simulation, or correlation as causal proof. Recommend bounded, reversible next steps and preserve human approval for experiments. Be concise, practical, and specific.',
         input: `Operator question:\n${question}\n\nGoverned workspace context:\n${JSON.stringify(context)}`,
       }),
     });

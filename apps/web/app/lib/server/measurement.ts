@@ -373,9 +373,25 @@ export async function applyWorkspaceMeasurement(payload: DashboardResponse, work
     payload.dataSource = 'ingested';
     payload.dataSourceNote = `Waiting for company data: ${computed.measurement.observedUsers} users observed; ${computed.measurement.requiredUsers} required before metrics are calculated.`;
     payload.metrics = payload.metrics.map((metric) => ({ ...metric, displayValue: '—', rawValue: 0, deltaPct: 0, spark: metric.spark.map(() => 0) }));
-    payload.growth = { ...payload.growth, currentDisplay: '—', points: payload.growth.points.map((point) => ({ ...point, value: 0 })), axisLabels: payload.growth.axisLabels.map(() => '₹0') };
-    payload.bottleneck = { ...payload.bottleneck, stage: 'Waiting for company data', severity: 'low', evidence: ['Upload company events to begin analysis.'] };
-    payload.recommendation = { ...payload.recommendation, title: 'Connect your company data', summary: 'Import at least 10 users and their key events to unlock recommendations.', predictedUpliftPct: 0 };
+    payload.growth = { ...payload.growth, currentDisplay: '—', axisMax: 1, points: payload.growth.points.map((point) => ({ ...point, value: 0 })), axisLabels: payload.growth.axisLabels.map(() => '₹0') };
+    payload.bottleneck = {
+      ...payload.bottleneck,
+      stage: 'Waiting for company data', severity: 'low', dropOffPct: 0,
+      summary: 'Upload company events to begin funnel analysis.',
+      steps: payload.bottleneck.steps.map((step) => ({ ...step, userCount: 0, conversionPct: 0, stepConversionPct: 0, widthPct: 0, isBottleneck: false })),
+    };
+    payload.recommendation = {
+      ...payload.recommendation,
+      id: 'connect-company-data', title: 'Connect your company data',
+      description: 'Import at least 10 users and their key events to unlock evidence-based recommendations.',
+      focusMetric: 'Evidence coverage', predictedUpliftPct: 0, confidencePct: 0,
+      trafficPct: 0, durationDays: 0, evidence: [], assumptions: [],
+      status: 'awaiting_approval',
+      realityGate: { passed: false, requiresHumanApproval: true, checks: [] },
+    };
+    payload.opportunities = [];
+    payload.experiments = [];
+    payload.decisions = [];
     return;
   }
 

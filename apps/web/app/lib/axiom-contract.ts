@@ -58,7 +58,7 @@ export interface SystemStatus {
 export interface MetricCard {
   key: string;
   label: string;
-  /** Server pe format hua string, e.g. "₹8.4L". Indian lakh/crore convention. */
+  /** Server-formatted value using the workspace's selected unit convention. */
   displayValue: string;
   /** Wahi number raw form mein — charts, sorting aur thresholds ke liye. */
   rawValue: number;

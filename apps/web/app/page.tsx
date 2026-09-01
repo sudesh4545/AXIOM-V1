@@ -595,7 +595,7 @@ export default function Home() {
 
   const { workspace, systemStatus, metrics, growth, bottleneck, recommendation, experiments, decisions } = data;
   const availableWorkspaces = data.workspaceContext?.availableWorkspaces ?? [workspace];
-  const isDemoData = data.dataSource === 'demo_seed';
+  const isCollecting = data.measurement?.state !== 'measured';
   const normalizedSearch = searchQuery.trim().toLowerCase();
   const searchResults = [
     ...navItems.map((item) => ({ label: item.label, detail: `${item.label} workspace`, nav: item.label })),
@@ -690,11 +690,11 @@ export default function Home() {
             <button type="button" className={theme === 'dark' ? 'active' : ''} aria-pressed={theme === 'dark'} onClick={() => selectTheme('dark')} title="Dark mode"><Moon /><span>Dark</span></button>
             <button type="button" className={theme === 'neon' ? 'active' : ''} aria-pressed={theme === 'neon'} onClick={() => selectTheme('neon')} title="Neon mode"><Sparkles /><span>Neon</span></button>
           </div>
-          <button onClick={() => setTopbarMenu((current) => current === 'notifications' ? null : 'notifications')} className="notification" aria-label="Notifications" aria-expanded={topbarMenu === 'notifications'} type="button"><Bell /><b>3</b></button>
+          <button onClick={() => setTopbarMenu((current) => current === 'notifications' ? null : 'notifications')} className="notification" aria-label="Notifications" aria-expanded={topbarMenu === 'notifications'} type="button"><Bell /><b>{isCollecting ? 1 : 3}</b></button>
           <button id="profile-button" className="avatar" type="button" aria-label="Profile" aria-expanded={topbarMenu === 'profile'} onClick={() => setTopbarMenu((current) => current === 'profile' ? null : 'profile')}><img src="/brand/axiom-core-mark-v1-256.png" width="49" height="49" alt="" /></button>
 
           {topbarMenu === 'workspace' && <div className="topbar-popover workspace-popover"><small>{data.workspaceContext ? `${humanise(data.workspaceContext.role)} · ${data.workspaceContext.name}` : 'ACTIVE WORKSPACE'}</small><strong>{workspace.name}</strong><p>{workspace.objective ?? workspace.organizationName}</p><div className="workspace-options" role="list" aria-label="Available workspaces">{availableWorkspaces.map((option) => <button key={option.id} type="button" className={option.id === workspace.id ? 'active' : ''} disabled={workspaceSwitching} onClick={() => changeWorkspace(option.id)}><Building2 /><span><b>{option.name}</b><em>{humanise(option.environment)}</em></span>{option.id === workspace.id ? <CircleCheckBig /> : <ArrowRight />}</button>)}</div><button type="button" onClick={() => { setTopbarMenu(null); notify(data.dataSourceNote); }}><CircleCheckBig /> {systemStatus.message}</button></div>}
-          {topbarMenu === 'notifications' && <div className="topbar-popover notifications-popover"><small>3 SYSTEM UPDATES</small><button type="button" onClick={() => { setTopbarMenu(null); notify(data.dataSourceNote); }}><CircleCheckBig /><span><b>{systemStatus.label}</b><em>{systemStatus.message}</em></span></button><button type="button" onClick={() => activateSection('Intelligence')}><CircleAlert /><span><b>{bottleneck.stage}</b><em>{humanise(bottleneck.severity)} severity bottleneck</em></span></button><button type="button" onClick={() => activateSection('Simulations')}><Sparkles /><span><b>New recommendation</b><em>{recommendation.title}</em></span></button></div>}
+          {topbarMenu === 'notifications' && <div className="topbar-popover notifications-popover"><small>{isCollecting ? '1 SETUP UPDATE' : '3 SYSTEM UPDATES'}</small><button type="button" onClick={() => { setTopbarMenu(null); notify(data.dataSourceNote); }}><CircleCheckBig /><span><b>{isCollecting ? 'Company data required' : systemStatus.label}</b><em>{isCollecting ? data.dataSourceNote : systemStatus.message}</em></span></button>{!isCollecting && <><button type="button" onClick={() => activateSection('Intelligence')}><CircleAlert /><span><b>{bottleneck.stage}</b><em>{humanise(bottleneck.severity)} severity bottleneck</em></span></button><button type="button" onClick={() => activateSection('Simulations')}><Sparkles /><span><b>New recommendation</b><em>{recommendation.title}</em></span></button></>}</div>}
           {topbarMenu === 'profile' && <div className="topbar-popover profile-popover"><div className="profile-summary"><span><img src="/brand/axiom-core-mark-v1-256.png" width="42" height="42" alt="" /></span><p><strong>{data.session?.displayName ?? data.operatorFirstName}</strong><small>{data.session?.email ?? 'AXIOM operator'}</small></p></div><button type="button" onClick={() => activateSection('Settings')}><Settings /> Workspace settings</button><button type="button" onClick={() => { setTopbarMenu(null); setCopilotOpen(true); }}><Sparkles /> Open AXIOM AI</button><button type="button" onClick={logout}><LogOut /> Log out</button><em>{workspace.name} · {humanise(workspace.environment)} · {data.storage ? `saved r${data.storage.revision}` : 'connected'}</em></div>}
         </header>
 
@@ -708,7 +708,7 @@ export default function Home() {
                 PROJECT_CONTEXT ka rule: "No fabricated metrics." Isliye source
                 label UI mein visible hai, sirf tooltip mein nahi.
               */}
-              <p>AXIOM is monitoring your <b>growth system</b>{isDemoData ? <> · <b>demo seed data</b></> : <> · <b>measured workspace data</b></>}</p>
+              <p>AXIOM is monitoring your <b>growth system</b>{isCollecting ? <> · <b>waiting for company data</b></> : <> · <b>measured workspace data</b></>}</p>
             </div>
             <button className="live-status" type="button" title={data.dataSourceNote} onClick={() => notify(data.dataSourceNote)}>
               <i /> <b>{systemStatus.label}</b><span>{systemStatus.message}</span>
@@ -751,6 +751,7 @@ export default function Home() {
                   onSelect={() => setSelectedExperiment(experiment)}
                 />
               ))}
+              {experiments.length === 0 && <div className="command-empty">No company experiments yet. Import measured data before creating an experiment.</div>}
               <button className="panel-link" type="button" onClick={() => activateSection('Experiments')}>View all experiments <ArrowRight /></button>
             </article>
 
@@ -760,6 +761,7 @@ export default function Home() {
                 {decisions.map((decision) => (
                   <DecisionRow key={decision.id} decision={decision} onSelect={() => setSelectedDecision(decision)} />
                 ))}
+                {decisions.length === 0 && <div className="command-empty">No company decisions recorded yet.</div>}
               </div>
               <button className="panel-link" type="button" onClick={() => activateSection('Decisions')}>View all decisions <ArrowRight /></button>
             </article>
