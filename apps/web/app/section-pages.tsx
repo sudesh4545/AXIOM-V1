@@ -137,6 +137,8 @@ function DecisionsPage({ data, onDecision }: Pick<SectionPagesProps, 'data' | 'o
 }
 
 function IntegrationsPage({ data, onNotify }: Pick<SectionPagesProps, 'data' | 'onNotify'>) {
+  const [connectOpen, setConnectOpen] = useState(false);
+  const [importStatus, setImportStatus] = useState('');
   const planned = [{ name: 'Stripe', detail: 'Revenue stream', icon: Database }, { name: 'PostHog', detail: 'Product events', icon: Activity }, { name: 'GA4', detail: 'Acquisition data', icon: BarChart3 }, { name: 'Webhooks', detail: 'Custom pipelines', icon: Webhook }];
   const ingestion = data.ingestion ?? { totalEvents: 0, uniqueUsers: 0, lastEventAt: null, sources: [] };
   const connectedSources = ingestion.sources.filter((source) => source.status === 'connected');
@@ -145,14 +147,34 @@ function IntegrationsPage({ data, onNotify }: Pick<SectionPagesProps, 'data' | '
   const lastDelivery = ingestion.lastEventAt
     ? new Date(ingestion.lastEventAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
     : 'Waiting';
+  async function importCsv(file: File) {
+    setImportStatus('Reading your file…');
+    const rows = (await file.text()).trim().split(/\r?\n/).filter(Boolean).map((row) => row.split(',').map((cell) => cell.trim().replace(/^"|"$/g, '')));
+    const headers = (rows.shift() ?? []).map((header) => header.toLowerCase());
+    const index = (name: string) => headers.indexOf(name);
+    const events = rows.slice(0, 100).map((row, rowIndex) => {
+      const eventName = row[index('event_name')] || row[index('event')] || 'user_signed_up';
+      const eventType = row[index('event_type')] || (eventName.includes('subscription') || eventName.includes('revenue') ? 'revenue' : 'lifecycle');
+      const anonymousId = row[index('anonymous_id')] || row[index('user_id')] || `csv-user-${rowIndex + 1}`;
+      const amount = row[index('monthly_amount_inr')] || row[index('amount_inr')];
+      return { idempotencyKey: `csv-${Date.now()}-${rowIndex}`, eventType, eventName, anonymousId, occurredAt: row[index('occurred_at')] || new Date().toISOString(), properties: amount ? { monthlyAmountInr: Number(amount) } : {} };
+    });
+    if (!events.length) { setImportStatus('CSV mein kam se kam ek data row honi chahiye.'); return; }
+    try {
+      const auth = await firebaseAuthorizationHeader();
+      const response = await fetch('/api/v1/events', { method: 'POST', headers: { 'Content-Type': 'application/json', ...auth }, body: JSON.stringify({ workspaceId: data.workspace.id, source: 'axiom_sdk', events }) });
+      if (!response.ok) throw new Error('Import failed');
+      setImportStatus(`${events.length} rows imported successfully. Dashboard refresh karke measured metrics dekhein.`);
+    } catch { setImportStatus('Import nahi ho paya. CSV columns aur login check karein.'); }
+  }
   return <section id="section-integrations" tabIndex={-1} className="section-page command-page integrations-command integrations-v2">
-    <CommandHeader icon={Puzzle} eyebrow="INTEGRATION CONTROL CENTER" title="Your entire data system, connected." description="Operate product, revenue and acquisition sources from one secure evidence layer." status={`${eventLabel} ingested`} action={<CommandButton onClick={() => onNotify('Use POST /api/v1/events for AXIOM SDK or webhook events')}><Puzzle /> Connect source</CommandButton>} />
+    <CommandHeader icon={Puzzle} eyebrow="INTEGRATION CONTROL CENTER" title="Your entire data system, connected." description="Operate product, revenue and acquisition sources from one secure evidence layer." status={`${eventLabel} ingested`} action={<CommandButton onClick={() => setConnectOpen(true)}><Puzzle /> Connect source</CommandButton>} />
     <div className="integration-v2-layout">
       <article className="integration-v2-main command-surface">
         <div className="surface-kicker"><span><Network /> Data operations</span><em>LIVE WORKSPACE</em></div>
         <div className="integration-v2-kpis"><span><small>Live events</small><strong>{ingestion.totalEvents.toLocaleString('en-IN')}</strong><em>Workspace scoped</em></span><span><small>Known users</small><strong>{ingestion.uniqueUsers.toLocaleString('en-IN')}</strong><em>Anonymous IDs</em></span><span><small>Active sources</small><strong>{connectedSources.length}</strong><em>{connectedSources.length ? 'Receiving data' : 'Endpoint ready'}</em></span><span><small>Last delivery</small><strong className="delivery-time">{lastDelivery}</strong><em>Persistent event log</em></span></div>
         <div className="pipeline-v2"><div className="pipeline-core"><i><Database /></i><span><small>INGESTION CORE</small><b>AXIOM Events API</b><em><i /> {ingestion.totalEvents ? 'Connected and receiving events' : 'Ready at /api/v1/events'}</em></span></div><ArrowRight /> <div className="pipeline-output"><Sparkles /><span><small>GOVERNED OUTPUT</small><b>{ingestion.totalEvents ? 'Evidence stream active' : 'Awaiting first measured event'}</b></span></div></div>
-        <div className="source-grid-v2">{planned.map(({ name, detail, icon: Icon }, index) => {const adapterReady=['Stripe','PostHog','Webhooks'].includes(name);const live=connectedSources.some((source)=>source.source.toLowerCase()===name.toLowerCase());const endpoint=name==='Webhooks'?'/api/v1/events':'/api/v1/adapters';return <button type="button" key={name} onClick={() => onNotify(adapterReady?`${name} endpoint ready at POST ${endpoint}`:`${name} connector is planned for a future AXIOM phase`)}><i><Icon /></i><span><b>{name}</b><small>{detail}</small></span><em>0{index + 1}</em><strong>{live?'Live':adapterReady?'Ready':'Planned'}</strong><ArrowRight /></button>})}</div>
+        <div className="source-grid-v2">{planned.map(({ name, detail, icon: Icon }, index) => {const adapterReady=['Stripe','PostHog','Webhooks'].includes(name);const live=connectedSources.some((source)=>source.source.toLowerCase()===name.toLowerCase());return <button type="button" key={name} onClick={() => adapterReady ? setConnectOpen(true) : onNotify(`${name} connector jaldi available hoga.`)}><i><Icon /></i><span><b>{name}</b><small>{detail}</small></span><em>0{index + 1}</em><strong>{live?'Live':adapterReady?'Ready':'Planned'}</strong><ArrowRight /></button>})}</div>
       </article>
       <aside className="integration-v2-side command-surface">
         <div className="surface-kicker"><span><Activity /> Source readiness</span><em>{connectedSources.length ? 'LIVE' : 'ENDPOINT READY'}</em></div>
@@ -162,6 +184,7 @@ function IntegrationsPage({ data, onNotify }: Pick<SectionPagesProps, 'data' | '
         <p className="integration-v2-note">PostHog and Stripe deliveries are normalized into the same governed event taxonomy. Metrics switch from demo to measured only after the evidence gate passes.</p>
       </aside>
     </div>
+    {connectOpen && <div className="integration-modal-backdrop" role="presentation" onClick={() => setConnectOpen(false)}><div className="integration-connect-modal" role="dialog" aria-modal="true" aria-labelledby="connect-source-title" onClick={(event) => event.stopPropagation()}><button type="button" className="modal-close" onClick={() => setConnectOpen(false)} aria-label="Close">×</button><span className="modal-eyebrow">DATA IMPORT</span><h2 id="connect-source-title">Company data connect karein</h2><p>Developer access ke bina CSV upload karke dashboard test karein.</p><label className="csv-upload"><strong>Upload CSV</strong><small>event_name,event_type,user_id,occurred_at,monthly_amount_inr</small><input type="file" accept=".csv,text/csv" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importCsv(file); }} /></label><div className="integration-template"><b>Required columns</b><span>event_name · user_id · occurred_at</span><small>Revenue events ke liye monthly_amount_inr bhi add karein.</small></div>{importStatus && <div className="integration-import-status">{importStatus}</div>}<button type="button" className="command-action" onClick={() => setConnectOpen(false)}>Done</button></div></div>}
   </section>;
 }
 
