@@ -1,7 +1,8 @@
 'use client';
 
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, memo, useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
+import Image from 'next/image';
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
 import {
   Activity, ArrowLeft, ArrowRight, BarChart3, Beaker, Bell, BrainCircuit,
@@ -12,9 +13,11 @@ import {
 } from 'lucide-react';
 
 import { approveRecommendation, AxiomApiError, AxiomNetworkError, controlExperiment, loadOverview, selectWorkspace } from './lib/axiom-api';
-import { AuthScreen } from './auth-screen';
+const AuthScreen = lazy(() => import('./auth-screen').then((module) => ({ default: module.AuthScreen })));
 import { firebaseAuth, firebaseAuthorizationHeader } from './lib/firebase-client';
-import { SectionPages } from './section-pages';
+import { createBundledDemoOverview, DEMO_WORKSPACE_ID } from './lib/demo-overview';
+import { useDialogFocus } from './lib/use-dialog-focus';
+const SectionPages = lazy(() => import('./section-pages').then((module) => ({ default: module.SectionPages })));
 import type {
   ActiveExperiment,
   Bottleneck,
@@ -60,6 +63,7 @@ const NAV_TARGET_IDS: Record<string, string> = {
 
 const DASHBOARD_CACHE_KEY = 'axiom-overview-cache-v1';
 const DASHBOARD_CACHE_MAX_AGE_MS = 15 * 60 * 1000;
+const DEMO_WORKSPACE = createBundledDemoOverview().workspace;
 
 function readCachedOverview(userId: string): DashboardResponse | null {
   if (typeof window === 'undefined') return null;
@@ -155,7 +159,7 @@ function FiberWave({ className = '' }: { className?: string }) {
 
 function Sparkline({ tone, points }: { tone: Tone; points: number[] }) {
   // 105 / count => 10 points pe 10.5% spacing, exactly Day 1 design jaisa.
-  const step = 105 / points.length;
+  const step = 100 / Math.max(points.length - 1, 1);
 
   /*
     Spark values ko **normalise** karna zaroori hai.
@@ -227,7 +231,7 @@ function MetricCard({ metric, index }: { metric: MetricCardData; index: number }
           tha — jabki churn girna acchi khabar hai. Yahi confusion is field ki
           wajah hai: down-arrow aur bad-news do alag cheezein hain.
         */}
-        <small className={metric.isImprovement ? '' : 'negative'}>
+        <small className={metric.direction === 'flat' || metric.isImprovement ? '' : 'negative'}>
           {trendArrow(metric.direction)} {Math.abs(metric.deltaPct)}%
         </small>
         <em>{metric.comparisonLabel}</em>
@@ -241,13 +245,13 @@ function MetricCard({ metric, index }: { metric: MetricCardData; index: number }
 function GrowthChart({ growth }: { growth: GrowthSeries }) {
   // Bar height = value / axisMax. `axisMax` server bhejta hai — frontend ko
   // guess karne dene se data badalne pe chart chup-chaap galat scale dikhata.
-  const heights = growth.points.map((point) => (point.value / growth.axisMax) * 100);
-  const step = 99.75 / heights.length; // 19 points => 5.25%, Day 1 design jaisa
+  const heights = growth.points.map((point) => Math.max(0, Math.min(100, (point.value / Math.max(growth.axisMax, 1)) * 100)));
+  const step = 98 / Math.max(heights.length - 1, 1); // 19 points => 5.25%, Day 1 design jaisa
 
   return (
     <div className="chart" aria-label={`${growth.metricLabel} growth chart, currently ${growth.currentDisplay}`}>
       <div className="chart-grid" /><div className="chart-aurora" />
-      <div className="axis-values">{growth.axisLabels.map((label) => <span key={label}>{label}</span>)}</div>
+      <div className="axis-values">{growth.axisLabels.map((label, index) => <span key={`${label}-${index}`}>{label}</span>)}</div>
       <div className="chart-bars" aria-hidden="true">{heights.map((height, index) => <i key={index} style={{ height: `${height}%`, '--bar-delay': `${index * 45}ms` } as CSSProperties} />)}</div>
       <div className="chart-particles" aria-hidden="true">{Array.from({ length: 22 }, (_, index) => <i key={index} style={{ '--i': index } as CSSProperties} />)}</div>
       <div className="chart-line" aria-hidden="true">
@@ -404,7 +408,7 @@ function ReviewModal({
           <button type="button" onClick={onClose}>Not now</button>
           {/* V1 mein `requiresHumanApproval` always true hai — yeh button hi woh
               human approval hai. Autonomous launch scope se bahar hai. */}
-          <button type="button" onClick={onApprove} disabled={saving}><Zap /> {saving ? 'Saving approval…' : 'Approve canary'}</button>
+          <button type="button" onClick={onApprove} disabled={saving || !gate.passed}><Zap /> {saving ? 'Saving approval…' : gate.passed ? 'Approve canary' : 'More evidence required'}</button>
         </div>
       </section>
     </div>
@@ -412,13 +416,15 @@ function ReviewModal({
 }
 
 /** Loading / error dono ek hi shell mein — layout jump nahi hota. */
-function StatusShell({ title, message, hint }: { title: string; message: string; hint?: string }) {
+function StatusShell({ title, message, hint, onRetry }: { title: string; message: string; hint?: string; onRetry?: () => void }) {
   return (
     <main className="app-shell">
       <aside className="sidebar"><Brand /><StableFiberWave className="sidebar-wave" /></aside>
       <section className="workspace">
         <div className="dashboard">
           <section className="welcome-row"><div><h1>{title}</h1><p>{message}</p></div></section>
+          {onRetry && <button type="button" className="command-action" onClick={onRetry}>Try again</button>}
+          {!onRetry && <div className="loading-skeleton" aria-hidden="true"><i /><i /><i /><i /></div>}
           {hint && <article className="panel"><p style={{ fontFamily: 'monospace', fontSize: 13, lineHeight: 1.7 }}>{hint}</p></article>}
         </div>
       </section>
@@ -449,6 +455,39 @@ export default function Home() {
   const [authUser, setAuthUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+  const requestSequence = useRef(0);
+  const activeWorkspace = useRef<string | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
+  useDialogFocus(reviewOpen || Boolean(selectedExperiment) || Boolean(selectedDecision));
+  const applyData = useCallback((payload: DashboardResponse) => {
+    activeWorkspace.current = payload.workspace.id;
+    setData(payload);
+    setError(null);
+    if (firebaseAuth.currentUser && payload.dataSource !== 'demo_seed') cacheOverview(payload, firebaseAuth.currentUser.uid);
+  }, []);
+  const refreshData = useCallback(async () => {
+    if (!data || data.dataSource === 'demo_seed' || (activeWorkspace.current && data.workspace.id !== activeWorkspace.current)) return;
+    const sequence = ++requestSequence.current;
+    setRefreshing(true);
+    try {
+      const updated = await loadOverview(undefined, data.workspace.id);
+      if (sequence === requestSequence.current) applyData(updated);
+    } catch (cause) {
+      if (sequence === requestSequence.current) {
+        if (cause instanceof AxiomApiError && [401,403].includes(cause.status)) setData(null);
+        setError(cause instanceof Error ? cause.message : 'Could not refresh company data.');
+      }
+      throw cause;
+    } finally { if (sequence === requestSequence.current) setRefreshing(false); }
+  }, [applyData, data]);
+  useEffect(() => {
+    const reconnect = () => { if (data) void refreshData().catch(() => {}); else setRetryKey((key) => key + 1); };
+    window.addEventListener('online', reconnect);
+    return () => window.removeEventListener('online', reconnect);
+  }, [data, refreshData]);
+  useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current); }, []);
 
   const authEligible = Boolean(authUser && (!authUser.providerData.some((provider) => provider.providerId === 'password') || authUser.emailVerified));
 
@@ -456,8 +495,11 @@ export default function Home() {
     const eligible = Boolean(nextUser && (!nextUser.providerData.some((provider) => provider.providerId === 'password') || nextUser.emailVerified));
     if (nextUser && eligible) {
       const cached = readCachedOverview(nextUser.uid);
-      if (cached) setData(cached);
+      setData(cached);
     }
+    ++requestSequence.current;
+    setError(null);
+    setRefreshing(eligible);
     setAuthUser(nextUser);
     setAuthReady(true);
     if (!nextUser) setData(null);
@@ -495,8 +537,11 @@ export default function Home() {
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
+      let savedTheme: string | null = null;
+      try {
       setSidebarCollapsed(window.localStorage.getItem('axiom-sidebar-collapsed') === 'true');
-      const savedTheme = window.localStorage.getItem('axiom-theme');
+      savedTheme = window.localStorage.getItem('axiom-theme');
+      } catch { /* Device storage is optional. */ }
       const initialTheme: AxiomTheme = savedTheme === 'dark' || savedTheme === 'light' || savedTheme === 'neon'
         ? savedTheme
         : window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
@@ -512,29 +557,32 @@ export default function Home() {
     // karna React warning deta hai aur memory leak ka signal hai. React ke
     // StrictMode dev double-mount mein bhi yeh pehli fetch ko ignore kara deta.
     let cancelled = false;
+    const sequence = ++requestSequence.current;
 
     loadOverview()
-      .then((payload) => { if (!cancelled) { cacheOverview(payload, authUser.uid); setData(payload); setError(null); } })
+      .then((payload) => { if (!cancelled && sequence === requestSequence.current) applyData(payload); })
       .catch((cause: unknown) => {
-        if (cancelled) return;
+        if (cancelled || sequence !== requestSequence.current) return;
         if (cause instanceof AxiomNetworkError) {
-          setError('AXIOM API se connect nahi ho paya');
+          setError('Could not connect to AXIOM. Check your connection and try again.');
           setHint('Please refresh the page. AXIOM will reconnect automatically.');
         } else if (cause instanceof AxiomApiError) {
+          if ([401,403].includes(cause.status)) setData(null);
           setError(`API error ${cause.status}: ${cause.message}`);
           setHint(null);
         } else {
           setError(cause instanceof Error ? cause.message : 'Unknown error');
-          setHint('cd apps/api\npython -m scripts.seed');
+          setHint('Your saved data is safe. Please try again.');
         }
-      });
+      }).finally(() => { if (!cancelled && sequence === requestSequence.current) setRefreshing(false); });
 
     return () => { cancelled = true; };
-  }, [authEligible, authUser]);
+  }, [authEligible, authUser, retryKey, applyData]);
 
   const notify = useCallback((message: string) => {
     setToast(message);
-    window.setTimeout(() => setToast(''), 2200);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(''), 4500);
   }, []);
 
   const activateSection = useCallback((label: string) => {
@@ -556,7 +604,7 @@ export default function Home() {
   const toggleSidebar = () => {
     setSidebarCollapsed((current) => {
       const next = !current;
-      window.localStorage.setItem('axiom-sidebar-collapsed', String(next));
+      try { window.localStorage.setItem('axiom-sidebar-collapsed', String(next)); } catch {}
       return next;
     });
   };
@@ -566,7 +614,7 @@ export default function Home() {
     const root = document.documentElement;
     root.classList.add('axiom-theme-changing');
     setTheme(nextTheme);
-    window.localStorage.setItem('axiom-theme', nextTheme);
+    try { window.localStorage.setItem('axiom-theme', nextTheme); } catch {}
     root.dataset.theme = nextTheme;
     window.setTimeout(() => root.classList.remove('axiom-theme-changing'), 300);
     notify(`${nextTheme.charAt(0).toUpperCase() + nextTheme.slice(1)} appearance selected`);
@@ -576,26 +624,27 @@ export default function Home() {
   const openReview = useCallback(() => setReviewOpen(true), []);
 
   const logout = async () => {
-    if (authUser) window.localStorage.removeItem(`${DASHBOARD_CACHE_KEY}:${authUser.uid}`);
-    window.sessionStorage.clear();
+    ++requestSequence.current;
+    try { if (authUser) window.localStorage.removeItem(`${DASHBOARD_CACHE_KEY}:${authUser.uid}`); } catch {}
     setTopbarMenu(null);
     setData(null);
     await signOut(firebaseAuth);
   };
 
   if (!authReady) return <StatusShell title="Securing AXIOM…" message="Checking your verified identity" />;
-  if (!authUser || !authEligible) return <AuthScreen theme={theme} user={authUser} onThemeChange={selectTheme} />;
+  if (!authUser || !authEligible) return <Suspense fallback={<StatusShell title="Opening sign in…" message="Your workspace will be ready shortly." />}><AuthScreen theme={theme} user={authUser} onThemeChange={selectTheme} /></Suspense>;
 
-  if (error) {
-    return <StatusShell title="Dashboard unavailable" message={error} hint={hint ?? undefined} />;
+  if (error && !data) {
+    return <StatusShell title="Dashboard unavailable" message={error} hint={hint ?? undefined} onRetry={() => { setError(null); setRefreshing(true); setRetryKey((key) => key + 1); }} />;
   }
   if (!data) {
     return <StatusShell title="Loading AXIOM…" message="Fetching your growth system snapshot" />;
   }
 
   const { workspace, systemStatus, metrics, growth, bottleneck, recommendation, experiments, decisions } = data;
-  const availableWorkspaces = data.workspaceContext?.availableWorkspaces ?? [workspace];
-  const isCollecting = data.measurement?.state !== 'measured';
+  const realWorkspaces = data.workspaceContext?.availableWorkspaces ?? (data.dataSource === 'demo_seed' ? [] : [workspace]);
+  const availableWorkspaces = [...realWorkspaces.filter((option) => option.id !== DEMO_WORKSPACE_ID), DEMO_WORKSPACE];
+  const isCollecting = data.dataSource !== 'demo_seed' && data.measurement?.state !== 'measured';
   const normalizedSearch = searchQuery.trim().toLowerCase();
   const searchResults = [
     ...navItems.map((item) => ({ label: item.label, detail: `${item.label} workspace`, nav: item.label })),
@@ -613,7 +662,9 @@ export default function Home() {
     setCopilotOpen(true);
     setCopilotLoading(true);
     try {
+      if (data.dataSource === 'demo_seed') { setCopilotReply('This is a read-only demo. Choose a company workspace to ask AXIOM AI about your measured data.'); return; }
       const response = await fetch('/api/v1/ai', {
+        signal: AbortSignal.timeout(30000),
         method: 'POST',
         headers: { 'content-type': 'application/json', ...await firebaseAuthorizationHeader() },
         body: JSON.stringify({
@@ -643,10 +694,29 @@ export default function Home() {
 
   const changeWorkspace = async (workspaceId: string) => {
     if (workspaceSwitching || workspaceId === workspace.id) { setTopbarMenu(null); return; }
+    ++requestSequence.current;
+    setRefreshing(false);
+    setError(null);
+    setSelectedExperiment(null);
+    setSelectedDecision(null);
+    setReviewOpen(false);
+    activeWorkspace.current = workspaceId;
     setWorkspaceSwitching(true);
     try {
+      if (workspaceId === DEMO_WORKSPACE_ID) {
+        const demo = createBundledDemoOverview();
+        setData({
+          ...demo,
+          operatorFirstName: data.operatorFirstName,
+          session: data.session,
+          workspaceContext: data.workspaceContext,
+        });
+        setTopbarMenu(null);
+        notify('Demo workspace selected · original sample data loaded');
+        return;
+      }
       const updated = await selectWorkspace(workspaceId);
-      setData(updated);
+      applyData(updated);
       setTopbarMenu(null);
       notify(`${updated.workspace.name} workspace selected`);
     } catch (cause) {
@@ -672,7 +742,7 @@ export default function Home() {
 
       <section className="workspace">
         <header className="topbar">
-          <button id="workspace-button" onClick={() => setTopbarMenu((current) => current === 'workspace' ? null : 'workspace')} className="workspace-select" type="button" aria-expanded={topbarMenu === 'workspace'}><Building2 /> {workspace.name} <ChevronDown /></button>
+          <button id="workspace-button" onClick={() => setTopbarMenu((current) => current === 'workspace' ? null : 'workspace')} className="workspace-select" type="button" aria-expanded={topbarMenu === 'workspace'}>{workspace.id === DEMO_WORKSPACE_ID ? <Sparkles /> : <Building2 />} {workspace.name} <ChevronDown /></button>
           <div className="search-shell">
             <label className="search"><Search /><input ref={searchRef} value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && searchResults[0]) { event.preventDefault(); activateSection(searchResults[0].nav); } }} aria-label="Search" placeholder="Search metrics, experiments, insights..." /><kbd>⌘ K</kbd></label>
             {normalizedSearch && (
@@ -691,13 +761,15 @@ export default function Home() {
             <button type="button" className={theme === 'neon' ? 'active' : ''} aria-pressed={theme === 'neon'} onClick={() => selectTheme('neon')} title="Neon mode"><Sparkles /><span>Neon</span></button>
           </div>
           <button onClick={() => setTopbarMenu((current) => current === 'notifications' ? null : 'notifications')} className="notification" aria-label="Notifications" aria-expanded={topbarMenu === 'notifications'} type="button"><Bell /><b>{isCollecting ? 1 : 3}</b></button>
-          <button id="profile-button" className="avatar" type="button" aria-label="Profile" aria-expanded={topbarMenu === 'profile'} onClick={() => setTopbarMenu((current) => current === 'profile' ? null : 'profile')}><img src="/brand/axiom-core-mark-v1-256.png" width="49" height="49" alt="" /></button>
+          <button id="profile-button" className="avatar" type="button" aria-label="Profile" aria-expanded={topbarMenu === 'profile'} onClick={() => setTopbarMenu((current) => current === 'profile' ? null : 'profile')}><Image src="/brand/axiom-core-mark-v1-256.png" width={49} height={49} alt="" /></button>
 
-          {topbarMenu === 'workspace' && <div className="topbar-popover workspace-popover"><small>{data.workspaceContext ? `${humanise(data.workspaceContext.role)} · ${data.workspaceContext.name}` : 'ACTIVE WORKSPACE'}</small><strong>{workspace.name}</strong><p>{workspace.objective ?? workspace.organizationName}</p><div className="workspace-options" role="list" aria-label="Available workspaces">{availableWorkspaces.map((option) => <button key={option.id} type="button" className={option.id === workspace.id ? 'active' : ''} disabled={workspaceSwitching} onClick={() => changeWorkspace(option.id)}><Building2 /><span><b>{option.name}</b><em>{humanise(option.environment)}</em></span>{option.id === workspace.id ? <CircleCheckBig /> : <ArrowRight />}</button>)}</div><button type="button" onClick={() => { setTopbarMenu(null); notify(data.dataSourceNote); }}><CircleCheckBig /> {systemStatus.message}</button></div>}
+          {topbarMenu === 'workspace' && <div className="topbar-popover workspace-popover"><small>{data.workspaceContext ? `${humanise(data.workspaceContext.role)} · ${data.workspaceContext.name}` : 'ACTIVE WORKSPACE'}</small><strong>{workspace.name}</strong><p>{workspace.objective ?? workspace.organizationName}</p><div className="workspace-options" role="list" aria-label="Available workspaces">{availableWorkspaces.map((option) => <button key={option.id} type="button" className={option.id === workspace.id ? 'active' : ''} disabled={workspaceSwitching} onClick={() => changeWorkspace(option.id)}>{option.id === DEMO_WORKSPACE_ID ? <Sparkles /> : <Building2 />}<span><b>{option.name}</b><em>{option.id === DEMO_WORKSPACE_ID ? 'Original sample data' : humanise(option.environment)}</em></span>{option.id === workspace.id ? <CircleCheckBig /> : <ArrowRight />}</button>)}</div><button type="button" onClick={() => { setTopbarMenu(null); notify(data.dataSourceNote); }}><CircleCheckBig /> {systemStatus.message}</button></div>}
           {topbarMenu === 'notifications' && <div className="topbar-popover notifications-popover"><small>{isCollecting ? '1 SETUP UPDATE' : '3 SYSTEM UPDATES'}</small><button type="button" onClick={() => { setTopbarMenu(null); notify(data.dataSourceNote); }}><CircleCheckBig /><span><b>{isCollecting ? 'Company data required' : systemStatus.label}</b><em>{isCollecting ? data.dataSourceNote : systemStatus.message}</em></span></button>{!isCollecting && <><button type="button" onClick={() => activateSection('Intelligence')}><CircleAlert /><span><b>{bottleneck.stage}</b><em>{humanise(bottleneck.severity)} severity bottleneck</em></span></button><button type="button" onClick={() => activateSection('Simulations')}><Sparkles /><span><b>New recommendation</b><em>{recommendation.title}</em></span></button></>}</div>}
-          {topbarMenu === 'profile' && <div className="topbar-popover profile-popover"><div className="profile-summary"><span><img src="/brand/axiom-core-mark-v1-256.png" width="42" height="42" alt="" /></span><p><strong>{data.session?.displayName ?? data.operatorFirstName}</strong><small>{data.session?.email ?? 'AXIOM operator'}</small></p></div><button type="button" onClick={() => activateSection('Settings')}><Settings /> Workspace settings</button><button type="button" onClick={() => { setTopbarMenu(null); setCopilotOpen(true); }}><Sparkles /> Open AXIOM AI</button><button type="button" onClick={logout}><LogOut /> Log out</button><em>{workspace.name} · {humanise(workspace.environment)} · {data.storage ? `saved r${data.storage.revision}` : 'connected'}</em></div>}
+          {topbarMenu === 'profile' && <div className="topbar-popover profile-popover"><div className="profile-summary"><span><Image src="/brand/axiom-core-mark-v1-256.png" width={42} height={42} alt="" /></span><p><strong>{data.session?.displayName ?? data.operatorFirstName}</strong><small>{data.session?.email ?? 'AXIOM operator'}</small></p></div><button type="button" onClick={() => activateSection('Settings')}><Settings /> Workspace settings</button><button type="button" onClick={() => { setTopbarMenu(null); setCopilotOpen(true); }}><Sparkles /> Open AXIOM AI</button><button type="button" onClick={logout}><LogOut /> Log out</button><em>{workspace.name} · {humanise(workspace.environment)} · {data.storage ? `saved r${data.storage.revision}` : 'connected'}</em></div>}
         </header>
 
+        {error && <div className="connection-banner" role="alert"><span>Showing your last saved snapshot. {error}</span><button type="button" disabled={refreshing} onClick={() => void refreshData().catch(() => {})}>{refreshing ? 'Reconnecting…' : 'Retry connection'}</button></div>}
+        {data.dataSource === 'demo_seed' && <div className="connection-banner demo-banner" role="status">Demo workspace · sample data · read-only. Select your company workspace to use real events.</div>}
         {activeNav === 'Overview' ? <div id="dashboard-overview" tabIndex={-1} className="dashboard">
           <div className="ambient-network" aria-hidden="true"><StableFiberWave className="horizon-wave" /></div>
           <section className="welcome-row">
@@ -708,13 +780,14 @@ export default function Home() {
                 PROJECT_CONTEXT ka rule: "No fabricated metrics." Isliye source
                 label UI mein visible hai, sirf tooltip mein nahi.
               */}
-              <p>AXIOM is monitoring your <b>growth system</b>{isCollecting ? <> · <b>waiting for company data</b></> : <> · <b>measured workspace data</b></>}</p>
+              <p>AXIOM is monitoring your <b>growth system</b>{isCollecting ? <> · <b>waiting for company data</b></> : <> · <b>{data.dataSource === 'demo_seed' ? 'sample demo data' : 'measured workspace data'}</b></>}</p>
             </div>
             <button className="live-status" type="button" title={data.dataSourceNote} onClick={() => notify(data.dataSourceNote)}>
-              <i /> <b>{systemStatus.label}</b><span>{systemStatus.message}</span>
+              <i /> <b>{refreshing ? 'Updating…' : error ? 'Offline snapshot' : systemStatus.label}</b><span>{data.dataSource === 'demo_seed' ? 'Sample data' : systemStatus.message}</span>
             </button>
           </section>
 
+          {isCollecting && <section className="company-onboarding" aria-label="Company setup"><div><strong>Set up your company workspace</strong><p>Add your company details, then import signup and activation events for at least {data.measurement?.requiredUsers ?? 10} users.</p><span>{data.measurement?.observedUsers ?? 0} users observed · {data.ingestion?.totalEvents ?? 0} events received</span></div><div className="setup-actions"><button type="button" onClick={() => activateSection('Settings')}>1. Company details</button><button type="button" className="command-action" onClick={() => activateSection('Integrations')}>2. Import events <ArrowRight /></button></div></section>}
           <section className="metric-grid" aria-label="Key metrics">{metrics.map((metric, index) => <StableMetricCard metric={metric} index={index} key={metric.key} />)}</section>
 
           <section className="analysis-grid">
@@ -737,7 +810,7 @@ export default function Home() {
                 <div><span>Confidence</span><b>{recommendation.confidencePct}%</b><i /></div>
               </div>
               <div className="risk">Risk <b><ShieldCheck /> {humanise(recommendation.riskLevel)}</b></div>
-              <button onClick={() => setReviewOpen(true)} className="primary-action" type="button">Review experiment <ArrowRight /></button>
+              <button onClick={() => isCollecting ? activateSection('Integrations') : setReviewOpen(true)} className="primary-action" type="button">{isCollecting ? 'Import company events' : 'Review experiment'} <ArrowRight /></button>
             </article>
           </section>
 
@@ -766,7 +839,7 @@ export default function Home() {
               <button className="panel-link" type="button" onClick={() => activateSection('Decisions')}>View all decisions <ArrowRight /></button>
             </article>
           </section>
-        </div> : <SectionPages activeNav={activeNav} data={data} theme={theme} onThemeChange={selectTheme} onOpenCopilot={openCopilot} onReview={openReview} onExperiment={setSelectedExperiment} onDecision={setSelectedDecision} onNotify={notify} />}
+        </div> : <Suspense fallback={<div className="section-loading" role="status">Opening {activeNav}…</div>}><SectionPages key={data.workspace.id} activeNav={activeNav} data={data} theme={theme} onThemeChange={selectTheme} onOpenCopilot={openCopilot} onReview={openReview} onExperiment={setSelectedExperiment} onDecision={setSelectedDecision} onNotify={notify} onRefresh={refreshData} onData={applyData} /></Suspense>}
       </section>
 
       {reviewOpen && (
@@ -776,10 +849,15 @@ export default function Home() {
           onClose={() => setReviewOpen(false)}
           onApprove={async () => {
             if (approvalSaving) return;
+            if (data.dataSource === 'demo_seed') {
+              setReviewOpen(false);
+              notify('Demo is read-only · Cloud and Sandbox were not changed');
+              return;
+            }
             setApprovalSaving(true);
             try {
-              const updated = await approveRecommendation(recommendation.id);
-              setData(updated);
+              const updated = await approveRecommendation(recommendation.id, workspace.id);
+              applyData(updated);
               setReviewOpen(false);
               notify(`Experiment approved and saved for ${recommendation.trafficPct}% canary traffic`);
             } catch (cause) {
@@ -791,7 +869,7 @@ export default function Home() {
         />
       )}
 
-      {selectedExperiment && <ExperimentDetailModal experiment={selectedExperiment} saving={experimentActionSaving} onClose={() => setSelectedExperiment(null)} onControl={async (action) => { if (experimentActionSaving) return; setExperimentActionSaving(true); try { const result = await controlExperiment(workspace.id, selectedExperiment.id, action); const updated = await loadOverview(undefined, workspace.id); setData(updated); setSelectedExperiment(updated.experiments.find((experiment) => experiment.id === selectedExperiment.id) ?? null); notify(`Experiment ${humanise(result.status)}; delivery ${result.flagEnabled ? 'enabled' : 'disabled'}`); } catch (cause) { notify(cause instanceof Error ? cause.message : 'Experiment control failed'); } finally { setExperimentActionSaving(false); } }} onAnalyze={() => { setCopilotReply(`${selectedExperiment.name} is ${selectedExperiment.progressPct}% complete with ${signedPct(selectedExperiment.observedLiftPct)} observed lift. ${selectedExperiment.isConclusive ? 'The result is conclusive.' : 'More evidence is required before a decision.'}`); setSelectedExperiment(null); setCopilotOpen(true); }} />}
+      {selectedExperiment && <ExperimentDetailModal experiment={selectedExperiment} saving={experimentActionSaving} onClose={() => setSelectedExperiment(null)} onControl={async (action) => { if (experimentActionSaving) return; if (data.dataSource === 'demo_seed') { notify('Demo is read-only. Select your company workspace.'); return; } setExperimentActionSaving(true); try { const result = await controlExperiment(workspace.id, selectedExperiment.id, action); const updated = await loadOverview(undefined, workspace.id); setData(updated); setSelectedExperiment(updated.experiments.find((experiment) => experiment.id === selectedExperiment.id) ?? null); notify(`Experiment ${humanise(result.status)}; delivery ${result.flagEnabled ? 'enabled' : 'disabled'}`); } catch (cause) { notify(cause instanceof Error ? cause.message : 'Experiment control failed'); } finally { setExperimentActionSaving(false); } }} onAnalyze={() => { setCopilotReply(`${selectedExperiment.name} is ${selectedExperiment.progressPct}% complete with ${signedPct(selectedExperiment.observedLiftPct)} observed lift. ${selectedExperiment.isConclusive ? 'The result is conclusive.' : 'More evidence is required before a decision.'}`); setSelectedExperiment(null); setCopilotOpen(true); }} />}
 
       {selectedDecision && <DecisionDetailModal decision={selectedDecision} onClose={() => setSelectedDecision(null)} onAnalyze={() => { setCopilotReply(`${selectedDecision.title}: ${selectedDecision.summary} Measured impact was ${signedPct(selectedDecision.impactPct)}.`); setSelectedDecision(null); setCopilotOpen(true); }} />}
 

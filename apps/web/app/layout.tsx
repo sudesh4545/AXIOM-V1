@@ -1,6 +1,9 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import './performance.css';
 import { PwaInstall } from './pwa-install';
+
+export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', themeColor: '#07111f' };
 
 export const metadata: Metadata = {
   title: 'AXIOM — Verified Experimentation OS',

@@ -2,6 +2,9 @@
 
 AXIOM is a verified autonomous experimentation operating system for B2B SaaS startups.
 
+Company setup and daily use: [Company quickstart](docs/COMPANY_QUICKSTART.md).
+Performance and workflow fixes: [September 2026 audit](docs/PERFORMANCE_AND_COMPANY_FIXES_2026-09-11.md).
+
 Its core loop is:
 
 ```text

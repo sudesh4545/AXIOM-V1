@@ -42,3 +42,7 @@ next-env.d.ts
 /work/
 /tsconfig.tsbuildinfo
 /.git.day1-backup/
+/.sites-runtime/
+*.db
+*.db-shm
+*.db-wal

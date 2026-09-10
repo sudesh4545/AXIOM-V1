@@ -24,9 +24,12 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: apps/web/package.json
+          cache-dependency-path: apps/web/package-lock.json
       - name: Install application dependencies
-        run: npm install --no-package-lock
+        run: npm ci
+        working-directory: apps/web
+      - name: Validate application
+        run: npm test && npx tsc --noEmit && npm run lint
         working-directory: apps/web
       - name: Build production application
         run: npm run build
@@ -34,7 +37,7 @@ jobs:
         env:
           AXIOM_CLOUDFLARE_DEPLOY: 'true'
       - name: Publish application
-        run: npm run deploy
+        run: npm run deploy -- --keep-vars
         working-directory: apps/web
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

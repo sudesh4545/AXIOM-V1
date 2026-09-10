@@ -49,14 +49,16 @@ export class AxiomNetworkError extends Error {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const url = `${API_BASE_URL}${path}`;
-  const authHeaders = await firebaseAuthorizationHeader();
+  const signal = init?.signal ? AbortSignal.any([init.signal, AbortSignal.timeout(20000)]) : AbortSignal.timeout(20000);
 
   let response: Response;
   try {
+    const authHeaders = await firebaseAuthorizationHeader();
     response = await fetch(url, {
       ...init,
+      signal,
       headers: { 'Content-Type': 'application/json', ...authHeaders, ...init?.headers },
       // Dashboard data hamesha fresh chahiye — stale cache pe "kal ke numbers"
       // dikhana analytics product mein bug hai, optimisation nahi.
@@ -132,10 +134,10 @@ export function selectWorkspace(workspaceId: string): Promise<DashboardResponse>
   });
 }
 
-export function approveRecommendation(recommendationId: string): Promise<DashboardResponse> {
+export function approveRecommendation(recommendationId: string, workspaceId: string): Promise<DashboardResponse> {
   return request<DashboardResponse>('/api/v1/dashboard', {
     method: 'POST',
-    body: JSON.stringify({ action: 'approve_recommendation', recommendationId }),
+    body: JSON.stringify({ action: 'approve_recommendation', recommendationId, workspaceId }),
   });
 }
 

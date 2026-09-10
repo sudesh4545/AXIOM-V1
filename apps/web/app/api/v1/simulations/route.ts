@@ -3,6 +3,8 @@ import { enforceRateLimit, secureJson } from '../../../lib/server/http-security'
 import { requestIdentity } from '../../../lib/server/request-identity';
 import { runShadowSimulation, type SimulationInput, type SimulationScenario } from '../../../lib/server/shadow-simulation';
 import { resolveWorkspaceAccess } from '../../../lib/server/workspace-access';
+import { createEmptyWorkspaceOverview } from '../../../lib/demo-overview';
+import { applyWorkspaceMeasurement } from '../../../lib/server/measurement';
 
 async function authorize(request: Request, workspaceId: string) {
   const identity = await requestIdentity(request);
@@ -33,10 +35,11 @@ export async function POST(request: Request): Promise<Response> {
     const authorized = await authorize(request, workspaceId); if (authorized instanceof Response) return authorized;
     if (!['owner', 'admin', 'analyst'].includes(authorized.role)) return secureJson({ code: 'insufficient_role', message: 'Viewer access cannot create simulations.', details: null }, 403);
     const limited = await enforceRateLimit(request, 'simulations:create', 20, 60); if (limited) return limited;
-    const snapshot = await getDatabase().prepare('SELECT payload_json FROM workspace_dashboard_snapshots WHERE user_id = ? AND workspace_id = ?')
-      .bind(authorized.identity.userId, workspaceId).first<{ payload_json: string }>();
-    const currentRecommendationId = snapshot ? (JSON.parse(snapshot.payload_json) as { recommendation?: { id?: string } }).recommendation?.id : null;
-    if (currentRecommendationId !== recommendationId) return secureJson({ code: 'recommendation_not_found', message: 'Only the current workspace recommendation can be simulated.', details: null }, 409);
+    // The dashboard derives recommendations from current events. A saved
+    // approval snapshot can predate an import and is not the current evidence.
+    const current = createEmptyWorkspaceOverview();
+    await applyWorkspaceMeasurement(current, workspaceId);
+    if (current.measurement?.state !== 'measured' || current.recommendation.id !== recommendationId) return secureJson({ code: 'recommendation_not_found', message: 'Only the current measured workspace recommendation can be simulated. Refresh the dashboard after importing events.', details: null }, 409);
     const input: SimulationInput = {
       baseConversionPct: Number(body?.baseConversionPct), predictedUpliftPct: Number(body?.predictedUpliftPct), trafficPct: Number(body?.trafficPct),
       durationDays: Number(body?.durationDays), dailyEligibleUsers: Number(body?.dailyEligibleUsers), baselineGuardrailPct: Number(body?.baselineGuardrailPct),

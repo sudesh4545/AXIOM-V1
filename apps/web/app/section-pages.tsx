@@ -41,6 +41,9 @@ import type {
   DecisionReceiptSummary,
 } from "./lib/axiom-contract";
 import { firebaseAuthorizationHeader } from "./lib/firebase-client";
+import { request } from "./lib/axiom-api";
+import { prepareCsvEvents, MAX_IMPORT_BYTES, IMPORT_BATCH_SIZE } from "./lib/csv-import";
+import { useDialogFocus } from "./lib/use-dialog-focus";
 
 type SectionPagesProps = {
   activeNav: string;
@@ -50,6 +53,8 @@ type SectionPagesProps = {
   onExperiment: (experiment: ActiveExperiment) => void;
   onDecision: (decision: DecisionReceiptSummary) => void;
   onNotify: (message: string) => void;
+  onRefresh: () => Promise<void>;
+  onData: (data: DashboardResponse) => void;
   theme: "dark" | "light" | "neon";
   onThemeChange: (theme: "dark" | "light" | "neon") => void;
 };
@@ -636,7 +641,9 @@ function SimulationsPage({
       const activated = data.bottleneck.steps.find((step) =>
         step.label.toLowerCase().includes("activated"),
       );
+      if (data.dataSource === "demo_seed") throw new Error("Demo is read-only. Select a company workspace to run a simulation.");
       const response = await fetch("/api/v1/simulations", {
+        signal: AbortSignal.timeout(20000),
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -957,9 +964,12 @@ function DecisionsPage({
 function IntegrationsPage({
   data,
   onNotify,
-}: Pick<SectionPagesProps, "data" | "onNotify">) {
+  onRefresh,
+}: Pick<SectionPagesProps, "data" | "onNotify" | "onRefresh">) {
   const [connectOpen, setConnectOpen] = useState(false);
+  useDialogFocus(connectOpen);
   const [importStatus, setImportStatus] = useState("");
+  const [importing, setImporting] = useState(false);
   const planned = [
     { name: "Stripe", detail: "Revenue stream", icon: Database },
     { name: "PostHog", detail: "Product events", icon: Activity },
@@ -988,64 +998,31 @@ function IntegrationsPage({
       })
     : "Waiting";
   async function importCsv(file: File) {
-    setImportStatus("Reading your file…");
-    const rows = (await file.text())
-      .trim()
-      .split(/\r?\n/)
-      .filter(Boolean)
-      .map((row) =>
-        row.split(",").map((cell) => cell.trim().replace(/^"|"$/g, "")),
-      );
-    const headers = (rows.shift() ?? []).map((header) => header.toLowerCase());
-    const index = (name: string) => headers.indexOf(name);
-    const events = rows.slice(0, 100).map((row, rowIndex) => {
-      const eventName =
-        row[index("event_name")] || row[index("event")] || "user_signed_up";
-      const eventType =
-        row[index("event_type")] ||
-        (eventName.includes("subscription") || eventName.includes("revenue")
-          ? "revenue"
-          : "lifecycle");
-      const anonymousId =
-        row[index("anonymous_id")] ||
-        row[index("user_id")] ||
-        `csv-user-${rowIndex + 1}`;
-      const amount =
-        row[index("monthly_amount_inr")] || row[index("amount_inr")];
-      return {
-        idempotencyKey: `csv-${Date.now()}-${rowIndex}`,
-        eventType,
-        eventName,
-        anonymousId,
-        occurredAt: row[index("occurred_at")] || new Date().toISOString(),
-        properties: amount ? { monthlyAmountInr: Number(amount) } : {},
-      };
-    });
-    if (!events.length) {
-      setImportStatus("CSV mein kam se kam ek data row honi chahiye.");
-      return;
-    }
+    if (importing) return;
+    if (data.dataSource === "demo_seed") { setImportStatus("Choose your company workspace to import data. Demo is read-only."); return; }
+    setImporting(true);
+    let inserted = 0, duplicates = 0, processed = 0;
     try {
-      const auth = await firebaseAuthorizationHeader();
-      const response = await fetch("/api/v1/events", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...auth },
-        body: JSON.stringify({
-          workspaceId: data.workspace.id,
-          source: "axiom_sdk",
-          events,
-        }),
-      });
-      if (!response.ok) throw new Error("Import failed");
-      setImportStatus(
-        `${events.length} rows imported successfully. Dashboard refresh ho raha hai…`,
-      );
-      window.setTimeout(() => window.location.reload(), 900);
-    } catch {
-      setImportStatus(
-        "Import nahi ho paya. CSV columns aur login check karein.",
-      );
-    }
+      if (file.size > MAX_IMPORT_BYTES) throw new Error("Choose a CSV smaller than 2 MB.");
+      setImportStatus("Checking your CSV…");
+      const events = await prepareCsvEvents(await file.text());
+      for (let offset = 0; offset < events.length; offset += IMPORT_BATCH_SIZE) {
+        const result = await request<{ inserted: number; duplicates: number }>("/api/v1/events", {
+          method: "POST",
+          body: JSON.stringify({ workspaceId: data.workspace.id, source: "axiom_sdk", events: events.slice(offset, offset + IMPORT_BATCH_SIZE) }),
+        });
+        inserted += result.inserted;
+        duplicates += result.duplicates;
+        processed = Math.min(offset + IMPORT_BATCH_SIZE, events.length);
+        setImportStatus(`${processed} / ${events.length} rows processed…`);
+      }
+      setImportStatus(`${inserted} events imported · ${duplicates} duplicates skipped. Updating dashboard…`);
+      await onRefresh();
+      setImportStatus(`${inserted} events imported · ${duplicates} duplicates skipped. Dashboard is up to date.`);
+      onNotify("Company data updated");
+    } catch (error) {
+      setImportStatus(`${processed ? `${processed} rows processed (${inserted} added). ` : ""}${error instanceof Error ? error.message : "Import failed."} You can retry this file safely.`);
+    } finally { setImporting(false); }
   }
   return (
     <section
@@ -1264,6 +1241,7 @@ function IntegrationsPage({
             role="dialog"
             aria-modal="true"
             aria-labelledby="connect-source-title"
+            onKeyDown={(event) => { if (event.key === "Escape") setConnectOpen(false); }}
             onClick={(event) => event.stopPropagation()}
           >
             <button
@@ -1275,9 +1253,9 @@ function IntegrationsPage({
               ×
             </button>
             <span className="modal-eyebrow">DATA IMPORT</span>
-            <h2 id="connect-source-title">Company data connect karein</h2>
+            <h2 id="connect-source-title">Import company events</h2>
             <p>
-              Developer access ke bina CSV upload karke dashboard test karein.
+              Upload up to 5,000 events (2 MB). All rows are checked before importing; repeated uploads skip duplicates.
             </p>
             <label className="csv-upload">
               <strong>Upload CSV</strong>
@@ -1286,10 +1264,12 @@ function IntegrationsPage({
               </small>
               <input
                 type="file"
+                disabled={importing || data.dataSource === "demo_seed"}
                 accept=".csv,text/csv"
                 onChange={(event) => {
                   const file = event.target.files?.[0];
                   if (file) void importCsv(file);
+                  event.target.value = "";
                 }}
               />
             </label>
@@ -1301,7 +1281,7 @@ function IntegrationsPage({
               </small>
             </div>
             {importStatus && (
-              <div className="integration-import-status">{importStatus}</div>
+              <div className="integration-import-status" role="status" aria-live="polite">{importStatus}</div>
             )}
             <button
               type="button"
@@ -1322,8 +1302,12 @@ function SettingsPage({
   onNotify,
   theme,
   onThemeChange,
-}: Pick<SectionPagesProps, "data" | "onNotify" | "theme" | "onThemeChange">) {
+  onData,
+}: Pick<SectionPagesProps, "data" | "onNotify" | "theme" | "onThemeChange" | "onData">) {
   const { workspace } = data;
+  const [saving, setSaving] = useState(false);
+  const [settingsError, setSettingsError] = useState("");
+  const editable = data.dataSource !== "demo_seed" && ["owner", "admin"].includes(data.workspaceContext?.role ?? "");
   const settings = [
     "Bottleneck alerts",
     "Experiment updates",
@@ -1384,6 +1368,23 @@ function SettingsPage({
                 <p>{workspace.objective ?? "Growth optimization"}</p>
               </div>
             </div>
+            <form className="company-settings" onSubmit={async (event) => {
+              event.preventDefault();
+              if (saving || !editable) return;
+              const fields = new FormData(event.currentTarget);
+              setSaving(true); setSettingsError("");
+              try {
+                const updated = await request<DashboardResponse>("/api/v1/dashboard", { method: "POST", body: JSON.stringify({ action: "update_workspace", workspaceId: workspace.id, name: fields.get("name"), organizationName: fields.get("organizationName"), objective: fields.get("objective") }) });
+                onData(updated); onNotify("Company settings saved");
+              } catch (error) { setSettingsError(error instanceof Error ? error.message : "Settings could not be saved."); }
+              finally { setSaving(false); }
+            }}>
+              <label>Company name<input name="organizationName" defaultValue={workspace.organizationName} maxLength={100} required disabled={!editable || saving} /></label>
+              <label>Workspace name<input name="name" defaultValue={workspace.name} maxLength={80} required disabled={!editable || saving} /></label>
+              <label>Business objective<textarea name="objective" defaultValue={workspace.objective ?? ""} maxLength={300} required rows={3} disabled={!editable || saving} /></label>
+              {editable ? <button className="command-action" type="submit" disabled={saving}>{saving ? "Saving…" : "Save company settings"}</button> : <p>Company settings can be changed by a workspace owner or admin.</p>}
+              {settingsError && <p role="alert">{settingsError}</p>}
+            </form>
             <dl>
               <div>
                 <dt>Signed-in account</dt>
@@ -1416,9 +1417,9 @@ function SettingsPage({
           <article className="preferences-v2 command-surface">
             <div className="surface-kicker">
               <span>
-                <BellRing /> Signal preferences
+                <BellRing /> Notification channels
               </span>
-              <em>THIS DEVICE</em>
+              <em>IN-APP UPDATES</em>
             </div>
             <div className="preferences-v2-list">
               {settings.map((label, index) => (
@@ -1436,16 +1437,7 @@ function SettingsPage({
                             : "API and workspace status"}
                     </small>
                   </span>
-                  <input
-                    type="checkbox"
-                    defaultChecked
-                    onChange={(event) =>
-                      onNotify(
-                        `${label} ${event.target.checked ? "enabled" : "disabled"} for this device`,
-                      )
-                    }
-                  />
-                  <em />
+<small className="notification-channel">In app</small>
                 </label>
               ))}
             </div>
@@ -1534,7 +1526,7 @@ export const SectionPages = memo(function SectionPages(
     case "Decisions":
       return <DecisionsPage data={props.data} onDecision={props.onDecision} />;
     case "Integrations":
-      return <IntegrationsPage data={props.data} onNotify={props.onNotify} />;
+      return <IntegrationsPage data={props.data} onNotify={props.onNotify} onRefresh={props.onRefresh} />;
     case "Settings":
       return (
         <SettingsPage
@@ -1542,6 +1534,7 @@ export const SectionPages = memo(function SectionPages(
           onNotify={props.onNotify}
           theme={props.theme}
           onThemeChange={props.onThemeChange}
+          onData={props.onData}
         />
       );
     default:

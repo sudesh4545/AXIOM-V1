@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 
 const base = process.env.AXIOM_TEST_URL ?? 'http://localhost:3000';
 const results = [];
+if (!['localhost', '127.0.0.1', '[::1]'].includes(new URL(base).hostname)) throw new Error('This suite writes synthetic events and must only target a local development server.');
 
 async function request(path, init = {}, expected = 200) {
   const response = await fetch(`${base}${path}`, { cache: 'no-store', ...init, headers: { 'Content-Type': 'application/json', ...init.headers } });
@@ -32,7 +33,13 @@ assert.equal(blockedLaunch.code, 'risk_policy_blocked');
 pass('pre-launch risk policy blocks demo-only production evidence');
 
 await request('/api/v1/dashboard', { method: 'POST', body: JSON.stringify({ action: 'select_workspace', workspaceId: sandbox.id }) });
-const measured = await request(`/api/v1/dashboard?workspaceId=${sandbox.id}`);
+// Build an explicit synthetic cohort instead of depending on an old seeded DB.
+const cohortDay = new Date().toISOString().slice(0, 10);
+const cohort = Array.from({ length: 20 }, (_, index) => ['user_signed_up', 'trial_started', ...(index < 8 ? ['activation_completed'] : []), ...(index < 4 ? ['teammate_invited'] : [])].map((eventName, step) => ({
+  idempotencyKey: `api-suite-${cohortDay}-${index}-${step}`, eventType: 'lifecycle', eventName, anonymousId: `api-suite-${index}`, occurredAt: new Date(Date.now() - (20 - step) * 86400000).toISOString(), properties: { synthetic: true, suite: 'api-verification' },
+}))).flat();
+await request('/api/v1/events', { method: 'POST', body: JSON.stringify({ workspaceId: sandbox.id, source: 'axiom_sdk', events: cohort }) }, 202);
+let measured = await request(`/api/v1/dashboard?workspaceId=${sandbox.id}`);
 assert.equal(measured.measurement.state, 'measured');
 assert.equal(measured.dataSource, 'ingested');
 assert.equal(measured.opportunities.length, 3);
@@ -50,7 +57,7 @@ const shadowRun = await request('/api/v1/simulations', { method: 'POST', body: J
   durationDays: measured.recommendation.durationDays, dailyEligibleUsers: 500, baselineGuardrailPct: 3.2,
   scenario: 'base', iterations: 1000, seed: 'day-30-verification',
 }) }, 201);
-assert.equal(shadowRun.result.expectedExposedUsers, 350);
+assert.equal(shadowRun.result.expectedExposedUsers, Math.round(500 * measured.recommendation.durationDays * measured.recommendation.trafficPct / 100));
 assert.equal(shadowRun.result.assumptions.some((item) => item.includes('does not create causal evidence')), true);
 const simulationHistory = await request(`/api/v1/simulations?workspaceId=${sandbox.id}`);
 assert.equal(simulationHistory.runs.some((run) => run.id === shadowRun.id), true);
@@ -124,6 +131,19 @@ const savedPolicy = await request('/api/v1/policies', { method: 'POST', body: JS
 assert.equal(savedPolicy.confidenceThresholdPct, policy.confidenceThresholdPct);
 pass('workspace risk-policy validation and persistence');
 
+// Keep the saved preference on Production to verify approval targets its explicit workspace.
+await request('/api/v1/dashboard', { method: 'POST', body: JSON.stringify({ action: 'select_workspace', workspaceId: production.id }) });
+measured = await request('/api/v1/dashboard', { method: 'POST', body: JSON.stringify({ action: 'approve_recommendation', workspaceId: sandbox.id, recommendationId: measured.recommendation.id }) });
+assert.equal(measured.workspace.id, sandbox.id);
+const companyBefore = await request(`/api/v1/dashboard?workspaceId=${sandbox.id}`);
+const updatedCompany = await request('/api/v1/dashboard', { method: 'POST', body: JSON.stringify({ action: 'update_workspace', workspaceId: sandbox.id, name: 'Verification Sandbox', organizationName: 'Verification Company', objective: 'Measure onboarding safely.' }) });
+assert.equal(updatedCompany.workspace.name, 'Verification Sandbox');
+const reloadedCompany = await request(`/api/v1/dashboard?workspaceId=${sandbox.id}`);
+assert.equal(reloadedCompany.workspace.organizationName, 'Verification Company');
+await request('/api/v1/dashboard', { method: 'POST', body: JSON.stringify({ action: 'update_workspace', workspaceId: randomUUID(), name: 'Forbidden', organizationName: 'Forbidden', objective: 'Forbidden' }) }, 403);
+await request('/api/v1/dashboard', { method: 'POST', body: JSON.stringify({ action: 'update_workspace', workspaceId: sandbox.id, name: '', organizationName: 'Test', objective: 'Test' }) }, 400);
+await request('/api/v1/dashboard', { method: 'POST', body: JSON.stringify({ action: 'update_workspace', workspaceId: sandbox.id, name: companyBefore.workspace.name, organizationName: companyBefore.workspace.organizationName, objective: companyBefore.workspace.objective }) });
+pass('company settings persist and mutation workspace stays isolated from active preference');
 const approvedExperiment = measured.experiments.find((item) => item.id === experimentId);
 if (approvedExperiment?.status === 'running') {
   let assignment;

@@ -55,9 +55,10 @@ async function attachRuntimeState(row: SnapshotRow, identity: RequestIdentity, a
   payload.operatorFirstName = firstName(identity);
   payload.session = identity;
   payload.workspaceContext = { ...access.organization, availableWorkspaces: access.available };
-  const [ingestion] = await Promise.all([
+  const [ingestion, , riskPolicy] = await Promise.all([
     loadIngestionSummary(access.active.id),
     applyWorkspaceMeasurement(payload, access.active.id),
+    loadRiskPolicy(access.active.id),
   ]);
   // Existing workspaces can retain older presentation labels inside their
   // persisted dashboard snapshot. Keep the stable metric key, but normalize
@@ -68,9 +69,8 @@ async function attachRuntimeState(row: SnapshotRow, identity: RequestIdentity, a
   payload.ingestion = ingestion;
   payload.opportunities ??= rankOpportunities(payload.bottleneck, payload.measurement?.observedUsers ?? 0);
   await syncApprovedExperimentDelivery(payload, access.active.id);
-  const [, riskPolicy] = await Promise.all([
+  await Promise.all([
     attachExperimentDeliveryState(payload, access.active.id),
-    loadRiskPolicy(access.active.id),
     attachDecisionReceipts(payload, access.active.id),
   ]);
   payload.riskPolicy = riskPolicy;
@@ -117,14 +117,14 @@ async function syncApprovedExperimentDelivery(payload: DashboardResponse, worksp
   ]);
 }
 
-async function loadDashboard(request: Request): Promise<{ identity: RequestIdentity; access: WorkspaceAccess; row: SnapshotRow; payload: DashboardResponse } | Response> {
+async function loadDashboard(request: Request, workspaceId?: string): Promise<{ identity: RequestIdentity; access: WorkspaceAccess; row: SnapshotRow; payload: DashboardResponse } | Response> {
   const identity = await requestIdentity(request);
   if (!identity) return json({ code: 'authentication_required', message: 'Sign in to open AXIOM.', details: null }, 401);
 
   await ensureDatabase();
   const now = new Date().toISOString();
   await upsertUser(identity, now);
-  const requestedWorkspaceId = new URL(request.url).searchParams.get('workspaceId');
+  const requestedWorkspaceId = workspaceId ?? new URL(request.url).searchParams.get('workspaceId');
   const access = await resolveWorkspaceAccess(identity, requestedWorkspaceId);
   if (requestedWorkspaceId && access.active.id !== requestedWorkspaceId) {
     return json({ code: 'workspace_forbidden', message: 'That workspace is not available to this account.', details: null }, 403);
@@ -146,16 +146,31 @@ export async function GET(request: Request): Promise<Response> {
 
 export async function POST(request: Request): Promise<Response> {
   try {
-    const loaded = await loadDashboard(request);
+    const body = await request.json().catch(() => null) as { action?: string; recommendationId?: string; workspaceId?: string; name?: string; organizationName?: string; objective?: string } | null;
+    if (!body || typeof body.workspaceId !== 'string' && body.workspaceId !== undefined) return json({ code: 'invalid_action', message: 'A valid workspace is required.', details: null }, 400);
+    const loaded = await loadDashboard(request, body.workspaceId);
     if (loaded instanceof Response) return loaded;
     const limited = await enforceRateLimit(request, 'dashboard:write', 60, 60); if (limited) return limited;
 
-    const body = await request.json().catch(() => null) as { action?: string; recommendationId?: string; workspaceId?: string } | null;
     if (body?.action === 'select_workspace' && body.workspaceId) {
       const access = await selectWorkspace(loaded.identity, body.workspaceId);
       if (!access) return json({ code: 'workspace_forbidden', message: 'That workspace is not available to this account.', details: null }, 403);
-      const row = await readOrCreateSnapshot(loaded.identity, access);
-      return json(await attachRuntimeState(row, loaded.identity, access));
+      return json(loaded.payload);
+    }
+
+    if (body.action === 'update_workspace') {
+      if (!['owner', 'admin'].includes(loaded.access.organization.role)) return json({ code: 'insufficient_role', message: 'Only an owner or admin can edit company settings.', details: null }, 403);
+      const { name, organizationName, objective } = body;
+      if (typeof name !== 'string' || !name.trim() || name.trim().length > 80 || typeof organizationName !== 'string' || !organizationName.trim() || organizationName.trim().length > 100 || typeof objective !== 'string' || !objective.trim() || objective.trim().length > 300) return json({ code: 'invalid_settings', message: 'Enter a company name (100 characters), workspace name (80) and objective (300).', details: null }, 400);
+      const db = getDatabase();
+      const now = new Date().toISOString();
+      await db.batch([
+        db.prepare('UPDATE workspaces SET name = ?, objective = ?, updated_at = ? WHERE id = ? AND organization_id = ?').bind(name.trim(), objective.trim(), now, loaded.access.active.id, loaded.access.organization.id),
+        db.prepare('UPDATE organizations SET name = ?, updated_at = ? WHERE id = ?').bind(organizationName.trim(), now, loaded.access.organization.id),
+        db.prepare('INSERT INTO audit_events (id, user_id, action, entity_type, entity_id, metadata_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)').bind(crypto.randomUUID(), loaded.identity.userId, 'update_workspace', 'workspace', loaded.access.active.id, JSON.stringify({ name: name.trim(), organizationName: organizationName.trim(), objective: objective.trim() }), now),
+      ]);
+      const access = await resolveWorkspaceAccess(loaded.identity, loaded.access.active.id);
+      return json({ ...loaded.payload, workspace: access.active, workspaceContext: { ...access.organization, availableWorkspaces: access.available } });
     }
 
     if (body?.action !== 'approve_recommendation' || body.recommendationId !== loaded.payload.recommendation.id) {

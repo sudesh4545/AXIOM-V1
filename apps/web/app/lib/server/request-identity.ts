@@ -36,6 +36,7 @@ async function firebaseIdentity(request: Request): Promise<RequestIdentity | nul
   if (!idToken || idToken.length > 8_192) return null;
   try {
     const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${FIREBASE_WEB_API_KEY}`, {
+      signal: AbortSignal.timeout(8000),
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ idToken }),
     });
     if (!response.ok) return null;

@@ -13,15 +13,15 @@ export function PwaInstall() {
   const [installed, setInstalled] = useState(false);
 
   useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      void navigator.serviceWorker.register('/sw.js', { scope: '/' });
-    }
+    const register = () => { if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') void navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' }).catch(() => {}); };
+    const registrationTimer = window.setTimeout(register, 1500);
 
     const standalone = window.matchMedia('(display-mode: standalone)').matches;
-    setInstalled(standalone);
+    const native = /AXIOMMobile|; wv\)/.test(navigator.userAgent);
 
     const onPrompt = (event: Event) => {
       event.preventDefault();
+      if (standalone || native) return;
       setPrompt(event as InstallPromptEvent);
     };
     const onInstalled = () => {
@@ -32,6 +32,7 @@ export function PwaInstall() {
     window.addEventListener('beforeinstallprompt', onPrompt);
     window.addEventListener('appinstalled', onInstalled);
     return () => {
+      window.clearTimeout(registrationTimer);
       window.removeEventListener('beforeinstallprompt', onPrompt);
       window.removeEventListener('appinstalled', onInstalled);
     };
@@ -40,10 +41,12 @@ export function PwaInstall() {
   if (!prompt || installed) return null;
 
   const install = async () => {
-    await prompt.prompt();
-    const choice = await prompt.userChoice;
-    if (choice.outcome === 'accepted') setInstalled(true);
-    setPrompt(null);
+    try {
+      await prompt.prompt();
+      const choice = await prompt.userChoice;
+      if (choice.outcome === 'accepted') setInstalled(true);
+    } catch { /* The browser can withdraw the install prompt. */ }
+    finally { setPrompt(null); }
   };
 
   return (

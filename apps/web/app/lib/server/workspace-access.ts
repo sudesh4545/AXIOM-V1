@@ -77,15 +77,17 @@ export async function resolveWorkspaceAccess(
   requestedWorkspaceId?: string | null,
 ): Promise<WorkspaceAccess> {
   const db = getDatabase();
-  let rows = (await db.prepare(workspaceQuery).bind(identity.userId).all<WorkspaceRow>()).results;
+  const [catalog, preference] = await Promise.all([
+    db.prepare(workspaceQuery).bind(identity.userId).all<WorkspaceRow>(),
+    db.prepare('SELECT active_workspace_id FROM user_workspace_preferences WHERE user_id = ?').bind(identity.userId).first<{ active_workspace_id: string }>(),
+  ]);
+  let rows = catalog.results;
   if (rows.length === 0) {
     await seedDefaultOrganization(identity, new Date().toISOString());
     rows = (await db.prepare(workspaceQuery).bind(identity.userId).all<WorkspaceRow>()).results;
   }
 
   if (rows.length === 0) throw new Error('AXIOM could not create the default workspace.');
-  const preference = await db.prepare('SELECT active_workspace_id FROM user_workspace_preferences WHERE user_id = ?')
-    .bind(identity.userId).first<{ active_workspace_id: string }>();
   const activeRow = rows.find((row) => row.id === requestedWorkspaceId)
     ?? rows.find((row) => row.id === preference?.active_workspace_id)
     ?? rows[0];
