@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { requestIdentity } from './request-identity';
 
 describe('request identity boundary', () => {
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); });
 
   it('allows the development identity only on loopback URLs', async () => {
     expect((await requestIdentity(new Request('http://localhost:3000/api')))?.authMode).toBe('local_development');
@@ -10,8 +10,9 @@ describe('request identity boundary', () => {
     expect(await requestIdentity(new Request('https://evil.example/api'))).toBeNull();
   });
 
-  it('accepts Sites-provided identity on a hosted URL', async () => {
-    const identity = await requestIdentity(new Request('https://axiom-v1.example.chatgpt.site/api', { headers: {
+  it('accepts runtime-provided identity only on the configured hosting domain', async () => {
+    vi.stubEnv('AXIOM_HOSTED_IDENTITY_SUFFIX', '.hosted.example');
+    const identity = await requestIdentity(new Request('https://axiom-v1.hosted.example/api', { headers: {
       'oai-authenticated-user-id': 'user-123',
       'oai-authenticated-user-email': 'SUDESH@example.com',
       'oai-authenticated-user-full-name': 'Sudesh%20Mehar',

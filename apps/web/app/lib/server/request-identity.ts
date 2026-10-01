@@ -67,7 +67,8 @@ export async function requestIdentity(request: Request): Promise<RequestIdentity
   const hostname = new URL(request.url).hostname;
   const userId = request.headers.get('oai-authenticated-user-id');
   const email = request.headers.get('oai-authenticated-user-email');
-  if (userId && email && hostname.endsWith('.chatgpt.site')) {
+  const trustedHostingSuffix = process.env.AXIOM_HOSTED_IDENTITY_SUFFIX;
+  if (userId && email && trustedHostingSuffix?.startsWith('.') && hostname.endsWith(trustedHostingSuffix)) {
     return {
       userId,
       email: email.toLowerCase(),

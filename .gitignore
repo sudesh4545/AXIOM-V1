@@ -63,7 +63,9 @@ apps/web/.git.day1-backup/
 apps/web/.openai/
 
 # Editor-specific local launch settings
-.claude/
+.code/
+*.zip
+docs/*.docx
 apps/desktop/node_modules/
 apps/desktop/release/
 apps/mobile/node_modules/
